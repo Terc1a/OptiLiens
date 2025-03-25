@@ -14,19 +14,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# def log_request(request: Request, client_ip: str):
-    # """Функция для логирования в терминал"""
-    # print("\n" + "=" * 50)
-    # print(f"📨 Новый запрос ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})")
-    # print(f"🌐 IP: {client_ip}")
-    # print(f"🛠️ Метод: {request.method}")
-    # print(f"🔗 URL: {request.url}")
-    # print(f"🧐 Заголовки:")
-    # for name, value in request.headers.items():
-        # print(f"  • {name}: {value}")
-    # print("=" * 50 + "\n")
 
-
+#Обработка запросов на / с основного домена
 @app.get('/')
 async def analyze_request(request: Request):
     client_ip = request.headers.get("x-real-ip") or \
@@ -59,23 +48,24 @@ async def analyze_request(request: Request):
             cnx.commit()
             cnx.close()
     else:
-        
-         
         add_data = f"""insert into hikariplus(addr, name, method, timed, is_mobile, user_agent) values('{client_ip}', '{str(uuid.uuid4())}', '{request.method}', '{datetime.now()}', '{is_mobile}', '{lstring}')"""
         cursor.execute(add_data)
         cnx.commit()
         cnx.close()
+        
+    #БОЛЬШЕ логов богу логов
     logger.info(f"\n{'='*50}\n"
-                f"req_method: {request.method}\n"
-                f"user_ip: {client_ip}\n"
-                f"is_mobile: {is_mobile}\n"
-                f"user-agent: {lstring}\n"
+                f"🛠️  req_method: {request.method}\n"
+                f"🌐 user_ip: {client_ip}\n"
+                f"🧐 is_mobile: {is_mobile}\n"
+                f"📨 user-agent: {lstring}\n"
                 f"timestamp: {datetime.now()}\n"
-                f"uname: {client_ip}\n"
+                f"• uname: {client_ip}\n"
                 f"conn_status: {conn_status}\n"
                 f"{'='*50}"
     )
-    
+
+    #Возвращаем ответ
     if usagent:
         return {"message":'request been handled successfully'}
     else:
@@ -83,7 +73,7 @@ async def analyze_request(request: Request):
     
 
 if __name__ == "__main__":
-    
+    logger.info(f"Server started at {datetime.now()}")
     uvicorn.run(app, host="192.168.0.11", port=5556, log_config='log_conf.yaml')
 
 
