@@ -29,7 +29,6 @@
 			<div class="container-fluid py-5">
 				<h1 class="display-5 fw-bold text-center">Login</h1>
 				<form id="form-signin" action="/api/signin" method="POST">
-					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 					<label for="inputName" class="sr-only">Name</label>
 					<input type="name" name="inputName" id="inputName" class="form-control" placeholder="Name" required
 						autofocus />

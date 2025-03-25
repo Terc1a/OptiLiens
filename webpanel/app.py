@@ -1,42 +1,16 @@
 from flask import Flask
-from flask import Flask, render_template, request, json, redirect, url_for
+from flask import Flask, render_template, request, json, redirect, url_for, jsonify
 from flaskext.mysql import MySQL
 from mysql.connector import connect, Error
 import yaml
-import flask_login
-from flask_wtf.csrf import CSRFProtect
-from flask_login import current_user, login_user, login_required, UserMixin ,logout_user
+
 
 with open("../config.yaml", "r") as f:
     conf = yaml.safe_load(f)
 
-csrf = CSRFProtect()
-
-login_manager = flask_login.LoginManager()
-
-class User(UserMixin):
-    def __init__(self, user_id):
-        self.id = user_id
 
 app = Flask(__name__)
-app.secret_key = 'a1dcbe59291f58c089qwerqazwf8ee8e2f44f05cdd4465e0d9c726938b2eeaab'
-csrf.init_app(app)
-login_manager.init_app(app)
 
-
-@login_manager.user_loader
-def load_user(user_id):
-    cursor = cnx.cursor(buffered=True)
-    check_user = f"""select * from users where user_name='{name}' and user_password='{password}'"""
-    cursor.execute(check_user)
-    
-    user = cursor.fetchall()
-    return user
-
-
-@login_manager.unauthorized_handler
-def unauthorized():
-    return render_template('signin.html')
 
 @app.route("/")
 def main():
@@ -45,13 +19,26 @@ def main():
 
 @app.route('/signin')
 def signin():
+    
     return render_template('signin.html')
+ 
 
 @app.route("/dash", methods=["POST", "GET"])
-@login_required
 def dash():
-    return render_template('dash.html')
-
+    if request.method == 'GET':
+        cnx = connect(user=conf['user'], password=conf['password'], host=conf['host_db'], database=conf['database'])
+        cursor = cnx.cursor(buffered=True)
+        req_count = f"""select count(*) from hikariplus"""
+        uniq_count = f"""select distinct addr from hikariplus"""
+        mobile_req_count = f"""select distinct addr from hikariplus where is_mobile='True'"""
+        cursor.execute(req_count)
+        rc = cursor.fetchall()
+        cursor.execute(uniq_count)
+        uc = cursor.fetchall()
+        cursor.execute(mobile_req_count)
+        mc = cursor.fetchall()
+        cnx.close()
+        return render_template('dash.html', rc=rc, uc=uc, mc=mc)
 
 @app.route('/api/signin',methods=['POST'])
 def signIn():
@@ -68,6 +55,27 @@ def signIn():
     else:
         return json.dumps({'html':'<span>Username or Password is incorrect</span>'})
     cnx.close()
+
+
+@app.route('/content-to-refresh')
+def refresher():
+        cnx = connect(user=conf['user'], password=conf['password'], host=conf['host_db'], database=conf['database'])
+        cursor = cnx.cursor(buffered=True)
+        req_count = f"""select count(*) from hikariplus"""
+        uniq_count = f"""select distinct addr from hikariplus"""
+        mobile_req_count = f"""select distinct addr from hikariplus where is_mobile='True'"""
+        cursor.execute(req_count)
+        rc = cursor.fetchall()
+        cursor.execute(uniq_count)
+        uc = cursor.fetchall()
+        cursor.execute(mobile_req_count)
+        mc = cursor.fetchall()
+        cnx.close()
+        return jsonify(success=True, rc=rc, uc=uc, mc=mc)
+    
+
+
+
 
 
 

@@ -1,0 +1,31 @@
+.main {
+    margin:0 auto; /* Центрируем блоки */
+    width:100%; /* Задаем ширину 100%, чтобы сделать ее резиновой */
+    max-width:1000px; /* Устанавливаем максимальную ширину */
+    }
+    .inline div{
+    display:inline-block; /* Делаем блоки по горизонтали */
+    display: -moz-inline-stack; /* Для FireFox 2, тот же самый, что и inline-block */
+    vertical-align:top; /* Выравниваем их сверху */
+    font-size:16px; /* Ставим дочкам размер шрифта, иначе примет значение родителя */
+    /* Для IE 6 и IE 7 чтобы блоки были по горизонтали*/
+    zoom: 1;
+    *display: inline;
+    
+    }
+    div.inline{font-size:0;} /* Ставим родителю значение 0, чтобы убрать отступы у блоков*/
+    .left-block{
+    background:red;
+    width:30%; /*Задаем ширину в процентах чтобы сделать ее резиновой*/
+    height:300px; /* Высота блока */
+    }
+    .content{
+    background:green;
+    width:30%;
+    height:300px;
+    }
+    .right-block{
+    background:blue;
+    width:30%;
+    height:300px;
+    }
