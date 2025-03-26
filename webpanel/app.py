@@ -38,7 +38,7 @@ def dash():
         cursor.execute(mobile_req_count)
         mc = cursor.fetchall()
         cnx.close()
-        return render_template('dash.html', rc=rc, uc=uc, mc=mc)
+        return render_template('dash.html', rc=rc, uc=uc, ucounter=uc[:9], mc=mc, mcounter=mc[:9])
 
 @app.route('/api/signin',methods=['POST'])
 def signIn():
@@ -71,7 +71,7 @@ def refresher():
         cursor.execute(mobile_req_count)
         mc = cursor.fetchall()
         cnx.close()
-        return jsonify(success=True, rc=rc, uc=uc, mc=mc)
+        return jsonify(success=True, rc=rc, uc=uc, ucounter=uc[:9], mc=mc, mcounter=mc[:9])
     
 
 
