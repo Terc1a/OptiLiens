@@ -14,6 +14,14 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+cnx = connect(user=conf['user'], password=conf['password'], host=conf['host_db'], database=conf['database'])
+cursor = cnx.cursor(buffered=True)
+test_conn = """show tables"""
+cursor.execute(test_conn)
+result = cursor.fetchall()
+cnx.close()
+if result:
+    logger.info(f'DB Connection successful')
 
 #Обработка запросов на / с основного домена
 @app.get('/')
@@ -24,21 +32,13 @@ async def analyze_request(request: Request):
     usagent = request.headers.get('user-agent')
     platform = request.headers.get('sec-ch-ua-platform')
     lstring = usagent.split()[0]
-    cnx = connect(user=conf['user'], password=conf['password'], host=conf['host_db'], database=conf['database'])
-    cursor = cnx.cursor(buffered=True)
-    test_conn = """show tables"""
-    cursor.execute(test_conn)
-    result = cursor.fetchall()
-    cnx.close()
 
-    if result:
-        conn_status = 'Data transfered to DB server successfully'
-    else:
-        conn_status = 'No connection to db'
     if platform == '"Android"':
         is_mobile = True #Пока прило доступно только с андроида, пусть оно отдает не модель платформы, а просто статус да или нет
     else:
         is_mobile = False
+
+    #БОЛЬШЕ логов богу логов
     logger.info(f"\n{'='*50}\n"
         f"🛠️  req_method: {request.method}\n"
         f"🌐 user_ip: {client_ip}\n"
@@ -46,7 +46,6 @@ async def analyze_request(request: Request):
         f"📨 user-agent: {lstring}\n"
         f"timestamp: {datetime.now()}\n"
         f"• uname: {client_ip}\n"
-        f"conn_status: {conn_status}\n"
         f"{'='*50}")
     cnx = connect(user=conf['user'], password=conf['password'], host=conf['host_db'], database=conf['database'])
     cursor = cnx.cursor(buffered=True)            
@@ -71,9 +70,7 @@ async def analyze_request(request: Request):
         cnx.commit()
         cnx.close()
         
-    #БОЛЬШЕ логов богу логов
-
-
+ 
     #Возвращаем ответ
     if usagent:
         return {"message":'request been handled successfully'}
@@ -86,7 +83,5 @@ if __name__ == "__main__":
     uvicorn.run(app, host="192.168.0.11", port=5556, log_config='log_conf.yaml')
 
 
-#ToDo
-# В БД вместо platform столбец называется platfrom - gotovo
-# В name у меня отдается адрес клиента, а не уникальное имя - gotovo
+
  

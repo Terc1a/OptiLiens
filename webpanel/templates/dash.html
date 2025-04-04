@@ -24,11 +24,11 @@
       Unique IP requests count:
       <span id="unique-count">{{uc|length}}</span><br>
       ----------------------<br>
-      <span id="ucount">
-        {% for el in ucounter %}
-        {{el[0]}}<br>
+      <br><span id="ucount">
+        {% for key, value in test.items() %}
+        {{key}}: {{value}}<br>
         {% endfor %}
-      </span>
+      </span><br>
       ----------------------<br>
     </div>
     <div class="right-block" id="right-block">
@@ -49,20 +49,3 @@
 
 </html>
 
-<script>
-  setInterval(async () => {
-    const response = await fetch("/content-to-refresh");
-    const data = await response.json();
-    document.getElementById("all-count").textContent = data['rc'];
-
-    document.getElementById("unique-count").textContent = data['uc'].length;
-    const ucounter = data['ucounter'].join('\n');
-    document.getElementById("ucount").textContent = ucounter;
-    document.getElementById("ucount").style.whiteSpace = 'pre-line';
-
-    document.getElementById("mobile-count").textContent = data['mc'].length;
-    const mcounter = data['mcounter'].join('\n');
-    document.getElementById("mcount").textContent = mcounter;
-    document.getElementById("mcount").style.whiteSpace = 'pre-line';
-  }, 10000); 
-</script>

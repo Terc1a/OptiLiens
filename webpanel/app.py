@@ -29,16 +29,31 @@ def dash():
         cnx = connect(user=conf['user'], password=conf['password'], host=conf['host_db'], database=conf['database'])
         cursor = cnx.cursor(buffered=True)
         req_count = f"""select count(*) from hikariplus"""
+        req_count2 = f"""select count(*)"""
         uniq_count = f"""select distinct addr from hikariplus"""
         mobile_req_count = f"""select distinct addr from hikariplus where is_mobile='True'"""
+        test_q = f"""SELECT DISTINCT(addr), COUNT(*) AS req_count FROM hikariplus GROUP BY addr ORDER BY req_count DESC limit 10"""
         cursor.execute(req_count)
         rc = cursor.fetchall()
         cursor.execute(uniq_count)
         uc = cursor.fetchall()
         cursor.execute(mobile_req_count)
         mc = cursor.fetchall()
+        cursor.execute(test_q)
+        tq = cursor.fetchall()
+        print(type(tq))
+        items2 = [v[0] for v in tq]
+        items3 = [v[1] for v in tq]
+        test = dict((x,y) for x,y in tq)
+        print(test)
         cnx.close()
-        return render_template('dash.html', rc=rc, uc=uc, ucounter=uc[:9], mc=mc, mcounter=mc[:9])
+
+
+#Вот тут надо отдавать топ-10 активных адресов и количество запросов у них
+#SELECT DISTINCT(addr), COUNT(*) AS req_count FROM hikariplus GROUP BY addr ORDER BY req_count DESC limit 10;
+
+
+        return render_template('dash.html', rc=rc, uc=uc, ucounter=uc[:9], mc=mc, mcounter=mc[:9], test=test)
 
 @app.route('/api/signin',methods=['POST'])
 def signIn():
