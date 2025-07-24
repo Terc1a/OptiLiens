@@ -42,7 +42,7 @@ async def analyze(request: Request):
     return {"message": "ok"}
 
 
-@router.get("/wishes")            # mirroring для wish.hikariplus.ru
+@router.get("/wishes/")            # mirroring для wish.hikariplus.ru
 async def analyze(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (
@@ -78,7 +78,7 @@ async def analyze(request: Request):
     return {"message": "ok"}
 
 
-@router.get("/manage")            # mirroring для manage.hikariplus.ru
+@router.get("/manage/")            # mirroring для manage.hikariplus.ru
 async def analyze(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (
@@ -114,7 +114,7 @@ async def analyze(request: Request):
     return {"message": "ok"}
 
 
-@router.get("/blog")            # mirroring для manage.hikariplus.ru
+@router.get("/blog/")            # mirroring для manage.hikariplus.ru
 async def analyze(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (

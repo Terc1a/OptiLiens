@@ -5,7 +5,7 @@ from datetime import datetime
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+app = FastAPI(redirect_slashes=False)
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,4 +26,4 @@ async def log_all(request: Request, call_next):
 app.include_router(router)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="192.168.0.4", port=5556)
+    uvicorn.run(app, host="192.168.0.5", port=5556)
