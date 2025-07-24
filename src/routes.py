@@ -150,6 +150,42 @@ async def analyze(request: Request):
     return {"message": "ok"}
 
 
+@router.get("/todo/")            # mirroring для manage.hikariplus.ru
+async def analyze(request: Request):
+    """Главный обработчик корневого пути /"""
+    client_ip = (
+        request.headers.get("x-real-ip") or
+        request.headers.get("x-forwarded-for") or
+        request.client.host
+    )
+    ua = request.headers.get("user-agent", "")
+    short_ua = ua.split()[0] if ua else "Unknown"
+    is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
+
+    logger.info(
+        f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
+    )
+
+    with get_cursor() as (cur, _):
+        # Есть ли такой IP?
+        cur.execute(
+            "SELECT name FROM todo WHERE addr=%s LIMIT 1",
+            (client_ip,)
+        )
+        row = cur.fetchone()
+        name = row[0] if row else str(uuid.uuid4())
+
+        # Записываем визит
+        cur.execute(
+            """INSERT INTO todo
+               (addr, name, method, timed, is_mobile, user_agent)
+               VALUES (%s, %s, %s, %s, %s, %s)""",
+            (client_ip, name, request.method, datetime.now(), is_mobile, short_ua)
+        )
+
+    return {"message": "ok"}
+
+
 @router.get("/stats")
 async def stats():
     """JSON-эндпоинт для дашборда"""
