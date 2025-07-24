@@ -154,27 +154,23 @@ async def analyze(request: Request):
 async def stats():
     """JSON-эндпоинт для дашборда"""
     with get_cursor() as (cur, _):
-        # всего запросов
-        cur.execute("SELECT COUNT(*) FROM hikariplus")
-        rc = cur.fetchone()[0]
-
         # уникальные адреса и количество
-        cur.execute("SELECT COUNT(*) AS c FROM hikariplus GROUP BY addr")
+        cur.execute("SELECT COUNT(*) FROM hikariplus")
         todo_count = cur.fetchall()
 
 
         # уникальные адреса и количество2
-        cur.execute("SELECT COUNT(*) AS c FROM wishes GROUP BY addr")
+        cur.execute("SELECT COUNT(*) FROM wishes")
         wish_count = cur.fetchall()
 
 
         # уникальные адреса и количество3
-        cur.execute("SELECT COUNT(*) AS c FROM manage GROUP BY addr")
+        cur.execute("SELECT COUNT(*) FROM manage")
         manage_count = cur.fetchall()
 
 
         # уникальные адреса и количество3
-        cur.execute("SELECT COUNT(*) AS c FROM blog GROUP BY addr")
+        cur.execute("SELECT COUNT(*) FROM blog")
         blog_count = cur.fetchall()
 
     return {"todo": todo_count, "wish": wish_count, "manage": manage_count, "blog": blog_count}
