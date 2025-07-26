@@ -2,9 +2,139 @@ from fastapi import APIRouter, Request
 from src.database import get_cursor
 from src.logger import logger
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+import yaml
+import mysql.connector
+import json
+from decimal import Decimal
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
+
+# ---------- конфиг ----------
+with open("config.yaml", "r") as f:
+    conf = yaml.safe_load(f)
+
+DB_CFG = {
+    "user":     conf['user'],
+    "password": conf['password'],
+    "host":     conf['host_db'],
+    "database": conf['database'],
+    "charset":  "utf8mb4"
+}
+TABLES = ['blog', 'hikariplus', 'manage', 'todo', 'wishes']
+
+# ---------- универсальный сериализатор ----------
+def json_serial(obj):
+    """Преобразует Decimal, datetime и прочее в JSON-совместимое"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, datetime):
+        return obj.isoformat() + 'Z'
+    if isinstance(obj, bytes):
+        return obj.decode('utf-8', errors='ignore')
+    raise TypeError
+
+# ---------- вспомогательная функция ----------
+def fetch_for_table(tbl: str):
+    conn = mysql.connector.connect(**DB_CFG)
+    cur  = conn.cursor(dictionary=True)
+    now  = datetime.utcnow()
+    start = now - timedelta(hours=24)
+
+    def q(sql, params=()):
+        cur.execute(sql, params)
+        return cur.fetchall()
+
+    # 1. total_hits
+    total_hits = int(q(f"SELECT COUNT(*) AS c FROM `{tbl}`")[0]['c'])
+
+    # 2. recent_rows
+    recent_rows = q(f"""
+        SELECT
+          REGEXP_REPLACE(addr,'([0-9]+\\\\.[0-9]+\\\\.)[0-9]+\\\\.[0-9]+','$1xxx.xxx') AS addr,
+          name, method, timed, is_mobile,
+          CONCAT(LEFT(user_agent,60),'...') AS user_agent
+        FROM `{tbl}`
+        ORDER BY timed DESC
+        LIMIT 20
+    """)
+
+    # 3. hits_series
+    hits = q(f"""
+        SELECT UNIX_TIMESTAMP(timed)*1000 AS x, COUNT(*) AS y
+        FROM `{tbl}`
+        WHERE timed >= %s
+        GROUP BY x
+        ORDER BY x
+    """, (start,))
+
+    # 4. unique_addr_series
+    uniq = q(f"""
+        SELECT UNIX_TIMESTAMP(timed)*1000 AS x, COUNT(DISTINCT addr) AS y
+        FROM `{tbl}`
+        WHERE timed >= %s
+        GROUP BY x
+        ORDER BY x
+    """, (start,))
+
+    # 5. mobile_share_series
+    mobile = q(f"""
+        SELECT UNIX_TIMESTAMP(timed)*1000 AS x,
+               SUM(is_mobile='true')/COUNT(*) AS y
+        FROM `{tbl}`
+        WHERE timed >= %s
+        GROUP BY x
+        ORDER BY x
+    """, (start,))
+
+    # 6. top_methods
+    top_methods = q(
+        "SELECT method AS label, COUNT(*) AS value "
+        f"FROM `{tbl}` WHERE timed >= %s "
+        "GROUP BY method ORDER BY value DESC LIMIT 5",
+        (start,)
+    )
+
+    # 7. top_endpoints
+    top_endpoints = q(
+        "SELECT name AS label, COUNT(*) AS value "
+        f"FROM `{tbl}` WHERE timed >= %s "
+        "GROUP BY name ORDER BY value DESC LIMIT 5",
+        (start,)
+    )
+
+    # 8. ua_breakdown
+    ua = q(f"""
+        SELECT
+          CASE
+            WHEN user_agent LIKE '%%Chrome%%' THEN 'Chrome'
+            WHEN user_agent LIKE '%%Firefox%%' THEN 'Firefox'
+            WHEN user_agent LIKE '%%Safari%%' THEN 'Safari'
+            ELSE 'Other'
+          END AS label,
+          COUNT(*) AS value
+        FROM `{tbl}`
+        WHERE timed >= %s
+        GROUP BY label
+    """, (start,))
+
+    cur.close()
+    conn.close()
+
+    # отдаём словарь (всё уже int/float/str)
+    return {
+        "total_hits": total_hits,
+        "recent_rows": recent_rows,
+        "hits_series": hits,
+        "unique_addr_series": uniq,
+        "mobile_share_series": mobile,
+        "top_methods": top_methods,
+        "top_endpoints": top_endpoints,
+        "ua_breakdown": ua,
+        "censored_ips": [],
+        "censored_ua": []
+    }
 
 @router.get("/home/")            # mirroring для hikariplus.ru
 async def analyze(request: Request):
@@ -215,3 +345,35 @@ async def stats():
         todo_count = cur.fetchall()
 
     return {"home": home_count, "wish": wish_count, "manage": manage_count, "blog": blog_count, "todo": todo_count}
+
+
+@router.get("/pub_dash")
+async def pub_dash():
+    now = datetime.utcnow()
+    services = {tbl: fetch_for_table(tbl) for tbl in TABLES}
+
+    # глобальный unique_ips
+    conn = mysql.connector.connect(**DB_CFG)
+    cur = conn.cursor()
+    unions = " UNION ALL ".join(
+        f"SELECT addr FROM `{t}` WHERE timed >= %s" for t in TABLES
+    )
+    cur.execute(
+        f"SELECT COUNT(DISTINCT addr) FROM ({unions}) AS u",
+        [now - timedelta(hours=24)] * len(TABLES)
+    )
+    global_unique = int(cur.fetchone()[0])
+    cur.close()
+    conn.close()
+
+    payload = {
+        "services": services,
+        "global": {
+            "last_update": now.isoformat(timespec='seconds') + 'Z',
+            "total_hits": sum(s["total_hits"] for s in services.values()),
+            "total_unique_ips": global_unique
+        }
+    }
+
+    # сериализуем Decimal/datetime и т.д.
+    return JSONResponse(content=json.loads(json.dumps(payload, default=json_serial)))

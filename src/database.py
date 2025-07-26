@@ -1,6 +1,7 @@
 import mysql.connector
 from mysql.connector import pooling
 import yaml
+from contextlib import contextmanager
 
 # Читаем конфигурацию один раз
 with open("config.yaml", "r") as f:
@@ -16,8 +17,6 @@ pool = pooling.MySQLConnectionPool(
     database=conf['database']
 )
 
-# Удобный контекстный менеджер
-from contextlib import contextmanager
 
 @contextmanager
 def get_cursor():
