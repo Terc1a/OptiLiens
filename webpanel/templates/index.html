@@ -57,14 +57,13 @@
 </div>
 
 <script>
-const API_URL = 'https://analyze.hikariplus.ru/pub_dash';
+const API_URL = 'http://192.168.0.5:5556/pub_dash';
 let DATA, SEL = document.getElementById('serviceSelect');
 let charts = {};
 
 fetch(API_URL)
   .then(r => r.json())
   .then(d => {
-    console.log('✅ payload', d);
     DATA = d;
     SEL.innerHTML = Object.keys(d.services)
       .map(s => `<option value="${s}">${s}</option>`)
