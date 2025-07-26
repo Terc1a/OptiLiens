@@ -114,7 +114,7 @@ async def analyze(request: Request):
     return {"message": "ok"}
 
 
-@router.get("/blog/")            # mirroring для manage.hikariplus.ru
+@router.get("/blog/")            # mirroring для blog.hikariplus.ru
 async def analyze(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (
@@ -150,7 +150,7 @@ async def analyze(request: Request):
     return {"message": "ok"}
 
 
-@router.get("/todo/")            # mirroring для manage.hikariplus.ru
+@router.get("/todo/")            # mirroring для todo.hikariplus.ru
 async def analyze(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (
@@ -192,7 +192,7 @@ async def stats():
     with get_cursor() as (cur, _):
         # уникальные адреса и количество
         cur.execute("SELECT COUNT(*) FROM hikariplus")
-        todo_count = cur.fetchall()
+        home_count = cur.fetchall()
 
 
         # уникальные адреса и количество2
@@ -209,4 +209,9 @@ async def stats():
         cur.execute("SELECT COUNT(*) FROM blog")
         blog_count = cur.fetchall()
 
-    return {"todo": todo_count, "wish": wish_count, "manage": manage_count, "blog": blog_count}
+
+        # уникальные адреса и количество3
+        cur.execute("SELECT COUNT(*) FROM todo")
+        todo_count = cur.fetchall()
+
+    return {"home": home_count, "wish": wish_count, "manage": manage_count, "blog": blog_count, "todo": todo_count}
