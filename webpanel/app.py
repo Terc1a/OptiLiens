@@ -19,9 +19,9 @@ def main():
 
 @app.route('/signin')
 def signin():
-    
+
     return render_template('signin.html')
- 
+
 
 @app.route("/dash", methods=["POST", "GET"])
 def dash():
@@ -63,7 +63,7 @@ def signIn():
     cursor = cnx.cursor(buffered=True)
     check_user = f"""select * from users where user_name='{name}' and user_password='{password}'"""
     cursor.execute(check_user)
-    
+
     result = cursor.fetchall()
     if result:
         return redirect(url_for('dash'))
@@ -87,7 +87,7 @@ def refresher():
         mc = cursor.fetchall()
         cnx.close()
         return jsonify(success=True, rc=rc, uc=uc, ucounter=uc[:9], mc=mc, mcounter=mc[:9])
-    
+
 
 
 
