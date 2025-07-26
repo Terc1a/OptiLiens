@@ -6,7 +6,7 @@ from datetime import datetime
 
 router = APIRouter()
 
-@router.get("/")            # mirroring для hikariplus.ru
+@router.get("/home/")            # mirroring для hikariplus.ru
 async def analyze(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (
