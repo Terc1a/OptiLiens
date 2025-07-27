@@ -67,7 +67,7 @@ def fetch_for_table(tbl: str):
             cur.execute(sql, params)
             return cur.fetchall()
 
-        total_hits = int(q(f"SELECT COUNT(*) AS c FROM `{tbl}`")[0]['c'])
+        total_hits = int(q(f"SELECT COUNT(*) AS c FROM `{tbl}`")[0][0])
 
         recent_rows = q(f"""
             SELECT
