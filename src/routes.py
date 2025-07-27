@@ -8,9 +8,6 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-# ---------- конфиг ----------
-with open("config.yaml", "r") as f:
-    conf = yaml.safe_load(f)
 
 TABLES = ['blog', 'hikariplus', 'manage', 'todo', 'wishes']
 
