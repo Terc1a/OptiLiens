@@ -222,7 +222,6 @@ async def stats():
     return {"home": home_count, "wish": wish_count, "manage": manage_count, "blog": blog_count, "todo": todo_count}
 
 
-
 @router.get("/pub_dash")
 async def pub_dash():
     now = datetime.utcnow()
@@ -236,5 +235,4 @@ async def pub_dash():
             "total_unique_ips": global_unique_ips()
         }
     }
-
     return JSONResponse(content=json.loads(json.dumps(payload, default=json_serial)))

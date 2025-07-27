@@ -22,7 +22,7 @@ pool = pooling.MySQLConnectionPool(
 @contextmanager
 def get_cursor():
     conn = pool.get_connection()
-    cur = conn.cursor(buffered=True)      # ← tuple, как было
+    cur = conn.cursor(buffered=True)
     try:
         yield cur, conn
         conn.commit()
