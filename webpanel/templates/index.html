@@ -7,6 +7,29 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .chart-container {position:relative;height:300px;width:100%;margin-bottom:2rem;}
+
+    /* ---------- LOADER ---------- */
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,.85);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, sans-serif;
+    }
+    #loader .spinner-border {
+      width: 3rem;
+      height: 3rem;
+      margin-bottom: .75rem;
+      color: #0d6efd;
+    }
+    #loader .text-muted {
+      font-size: 1.1rem;
+    }
   </style>
 </head>
 <body>
@@ -56,6 +79,12 @@
   </div>
 </div>
 
+<!-- ---------- LOADER ---------- -->
+<div id="loader">
+  <div class="spinner-border" role="status"></div>
+  <span class="text-muted">Подгружаем данные, ожидайте…</span>
+</div>
+
 <script>
 const API_URL = 'https://analyze.hikariplus.ru/pub_dash';
 let DATA, SEL = document.getElementById('serviceSelect');
@@ -64,6 +93,7 @@ let charts = {};
 fetch(API_URL)
   .then(r => r.json())
   .then(d => {
+    document.getElementById('loader').remove();   // <-- hide loader
     console.log('✅ payload', d);
     DATA = d;
     SEL.innerHTML = Object.keys(d.services)
