@@ -6,11 +6,9 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import json
 
-# ---------- config ----------
 with open("config.yaml", "r") as f:
     conf = yaml.safe_load(f)
 
-# ---------- pool ----------
 pool = pooling.MySQLConnectionPool(
     pool_name="mypool",
     pool_size=10,
@@ -24,7 +22,7 @@ pool = pooling.MySQLConnectionPool(
 @contextmanager
 def get_cursor():
     conn = pool.get_connection()
-    cur = conn.cursor(buffered=True)          # ← dict=False (по умолчанию)
+    cur = conn.cursor(buffered=True)      # ← tuple, как было
     try:
         yield cur, conn
         conn.commit()
@@ -35,7 +33,6 @@ def get_cursor():
         cur.close()
         conn.close()
 
-# ---------- JSON serializer ----------
 def json_serial(obj):
     if isinstance(obj, Decimal):
         return float(obj)
@@ -45,7 +42,7 @@ def json_serial(obj):
         return obj.decode('utf-8', errors='ignore')
     raise TypeError
 
-# ---------- перенесённая функция ----------
+# ---------- старая функция без изменений ----------
 def fetch_for_table(tbl: str):
     conn = mysql.connector.connect(
         user=conf['user'],
@@ -55,7 +52,7 @@ def fetch_for_table(tbl: str):
         charset=conf['charset']
     )
     cur = conn.cursor()
-    now  = datetime.utcnow()
+    now = datetime.utcnow()
     start = now - timedelta(hours=24)
 
     def q(sql, params=()):
@@ -143,7 +140,6 @@ def fetch_for_table(tbl: str):
         "censored_ua": []
     }
 
-
 def global_unique_ips() -> int:
     conn = mysql.connector.connect(
         user=conf['user'],
@@ -152,7 +148,7 @@ def global_unique_ips() -> int:
         database=conf['database']
     )
     cur = conn.cursor()
-    now   = datetime.utcnow()
+    now = datetime.utcnow()
     start = now - timedelta(hours=24)
     tables = ['blog', 'hikariplus', 'manage', 'todo', 'wishes']
 
