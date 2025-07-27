@@ -61,15 +61,27 @@ def fetch_for_table(tbl: str):
 
     total_hits = int(q(f"SELECT COUNT(*) AS c FROM `{tbl}`")[0][0])
 
-    recent_rows = q(f"""
+    recent_rows_raw = q(f"""
         SELECT
-          REGEXP_REPLACE(addr,'([0-9]+\\\\.[0-9]+\\\\.)[0-9]+\\\\.[0-9]+','$1xxx.xxx') AS addr,
-          name, method, timed, is_mobile,
-          CONCAT(LEFT(user_agent,60),'...') AS user_agent
+        REGEXP_REPLACE(addr,'([0-9]+\\\\.[0-9]+\\\\.)[0-9]+\\\\.[0-9]+','$1xxx.xxx') AS addr,
+        name, method, timed, is_mobile,
+        CONCAT(LEFT(user_agent,60),'...') AS user_agent
         FROM `{tbl}`
         ORDER BY timed DESC
         LIMIT 20
     """)
+
+    recent_rows = [
+        {
+            "addr": row[0],
+            "name": row[1],
+            "method": row[2],
+            "timed": row[3],
+            "is_mobile": row[4],
+            "user_agent": row[5]
+        }
+        for row in recent_rows_raw
+    ]
 
     hits = q("""
         SELECT UNIX_TIMESTAMP(timed)*1000 AS x, COUNT(*) AS y
