@@ -2,4 +2,4 @@ host_db: 192.168.0.100
 user: analytics
 password: Zksj-dhfsee87
 database: analytics
-
+charset: utf8mb4

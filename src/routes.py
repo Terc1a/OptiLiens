@@ -20,7 +20,7 @@ DB_CFG = {
     "password": conf['password'],
     "host":     conf['host_db'],
     "database": conf['database'],
-    "charset":  "utf8mb4"
+    "charset":  conf['charset']
 }
 TABLES = ['blog', 'hikariplus', 'manage', 'todo', 'wishes']
 
