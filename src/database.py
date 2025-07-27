@@ -6,26 +6,25 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import json
 
-
-# Читаем конфигурацию один раз
+# ---------- config ----------
 with open("config.yaml", "r") as f:
     conf = yaml.safe_load(f)
 
-# Пул соединений
+# ---------- pool ----------
 pool = pooling.MySQLConnectionPool(
     pool_name="mypool",
     pool_size=10,
     user=conf['user'],
     password=conf['password'],
     host=conf['host_db'],
-    database=conf['database']
+    database=conf['database'],
+    charset=conf['charset']
 )
-
 
 @contextmanager
 def get_cursor():
     conn = pool.get_connection()
-    cur = conn.cursor(buffered=True)
+    cur = conn.cursor(buffered=True)          # ← dict=False (по умолчанию)
     try:
         yield cur, conn
         conn.commit()
@@ -36,11 +35,8 @@ def get_cursor():
         cur.close()
         conn.close()
 
-
-
-# ---------- utility ----------
+# ---------- JSON serializer ----------
 def json_serial(obj):
-    """JSON-encoder for Decimal / datetime / bytes."""
     if isinstance(obj, Decimal):
         return float(obj)
     if isinstance(obj, datetime):
@@ -49,88 +45,90 @@ def json_serial(obj):
         return obj.decode('utf-8', errors='ignore')
     raise TypeError
 
-
-# ---------- reusable helpers ----------
+# ---------- перенесённая функция ----------
 def fetch_for_table(tbl: str):
-    """
-    Returns a complete analytics dict for a single table.
-    All SQL lives in routes.py; this function only:
-      - opens a connection
-      - runs the queries
-      - returns the raw dict
-    """
-    with get_cursor() as (cur, _):
-        now   = datetime.utcnow()
-        start = now - timedelta(hours=24)
+    conn = mysql.connector.connect(
+        user=conf['user'],
+        password=conf['password'],
+        host=conf['host_db'],
+        database=conf['database'],
+        charset=conf['charset']
+    )
+    cur = conn.cursor()
+    now  = datetime.utcnow()
+    start = now - timedelta(hours=24)
 
-        def q(sql, params=()):
-            cur.execute(sql, params)
-            return cur.fetchall()
+    def q(sql, params=()):
+        cur.execute(sql, params)
+        return cur.fetchall()
 
-        total_hits = int(q(f"SELECT COUNT(*) AS c FROM `{tbl}`")[0][0])
+    total_hits = int(q(f"SELECT COUNT(*) AS c FROM `{tbl}`")[0][0])
 
-        recent_rows = q(f"""
-            SELECT
-              REGEXP_REPLACE(addr,'([0-9]+\\\\.[0-9]+\\\\.)[0-9]+\\\\.[0-9]+','$1xxx.xxx') AS addr,
-              name, method, timed, is_mobile,
-              CONCAT(LEFT(user_agent,60),'...') AS user_agent
-            FROM `{tbl}`
-            ORDER BY timed DESC
-            LIMIT 20
-        """)
+    recent_rows = q(f"""
+        SELECT
+          REGEXP_REPLACE(addr,'([0-9]+\\\\.[0-9]+\\\\.)[0-9]+\\\\.[0-9]+','$1xxx.xxx') AS addr,
+          name, method, timed, is_mobile,
+          CONCAT(LEFT(user_agent,60),'...') AS user_agent
+        FROM `{tbl}`
+        ORDER BY timed DESC
+        LIMIT 20
+    """)
 
-        hits = q("""
-            SELECT UNIX_TIMESTAMP(timed)*1000 AS x, COUNT(*) AS y
-            FROM `{}`
-            WHERE timed >= %s
-            GROUP BY x
-            ORDER BY x
-        """.format(tbl), (start,))
+    hits = q("""
+        SELECT UNIX_TIMESTAMP(timed)*1000 AS x, COUNT(*) AS y
+        FROM `{}`
+        WHERE timed >= %s
+        GROUP BY x
+        ORDER BY x
+    """.format(tbl), (start,))
 
-        uniq = q("""
-            SELECT UNIX_TIMESTAMP(timed)*1000 AS x, COUNT(DISTINCT addr) AS y
-            FROM `{}`
-            WHERE timed >= %s
-            GROUP BY x
-            ORDER BY x
-        """.format(tbl), (start,))
+    uniq = q("""
+        SELECT UNIX_TIMESTAMP(timed)*1000 AS x, COUNT(DISTINCT addr) AS y
+        FROM `{}`
+        WHERE timed >= %s
+        GROUP BY x
+        ORDER BY x
+    """.format(tbl), (start,))
 
-        mobile = q("""
-            SELECT UNIX_TIMESTAMP(timed)*1000 AS x,
-                   SUM(is_mobile='true')/COUNT(*) AS y
-            FROM `{}`
-            WHERE timed >= %s
-            GROUP BY x
-            ORDER BY x
-        """.format(tbl), (start,))
+    mobile = q("""
+        SELECT UNIX_TIMESTAMP(timed)*1000 AS x,
+               SUM(is_mobile='true')/COUNT(*) AS y
+        FROM `{}`
+        WHERE timed >= %s
+        GROUP BY x
+        ORDER BY x
+    """.format(tbl), (start,))
 
-        top_methods = q(
-            "SELECT method AS label, COUNT(*) AS value "
-            f"FROM `{tbl}` WHERE timed >= %s "
-            "GROUP BY method ORDER BY value DESC LIMIT 5",
-            (start,)
-        )
+    top_methods = q(
+        "SELECT method AS label, COUNT(*) AS value "
+        f"FROM `{tbl}` WHERE timed >= %s "
+        "GROUP BY method ORDER BY value DESC LIMIT 5",
+        (start,)
+    )
 
-        top_endpoints = q(
-            "SELECT name AS label, COUNT(*) AS value "
-            f"FROM `{tbl}` WHERE timed >= %s "
-            "GROUP BY name ORDER BY value DESC LIMIT 5",
-            (start,)
-        )
+    top_endpoints = q(
+        "SELECT name AS label, COUNT(*) AS value "
+        f"FROM `{tbl}` WHERE timed >= %s "
+        "GROUP BY name ORDER BY value DESC LIMIT 5",
+        (start,)
+    )
 
-        ua = q("""
-            SELECT
-              CASE
-                WHEN user_agent LIKE '%%Chrome%%' THEN 'Chrome'
-                WHEN user_agent LIKE '%%Firefox%%' THEN 'Firefox'
-                WHEN user_agent LIKE '%%Safari%%' THEN 'Safari'
-                ELSE 'Other'
-              END AS label,
-              COUNT(*) AS value
-            FROM `{}`
-            WHERE timed >= %s
-            GROUP BY label
-        """.format(tbl), (start,))
+    ua = q(f"""
+        SELECT
+          CASE
+            WHEN user_agent LIKE '%%Chrome%%' THEN 'Chrome'
+            WHEN user_agent LIKE '%%Firefox%%' THEN 'Firefox'
+            WHEN user_agent LIKE '%%Safari%%' THEN 'Safari'
+            ELSE 'Other'
+          END AS label,
+          COUNT(*) AS value
+        FROM `{tbl}`
+        WHERE timed >= %s
+        GROUP BY label
+    """, (start,))
+
+    cur.close()
+    conn.close()
 
     return {
         "total_hits": total_hits,
@@ -147,17 +145,25 @@ def fetch_for_table(tbl: str):
 
 
 def global_unique_ips() -> int:
-    """Return the number of distinct IPs across all tables in the last 24 h."""
-    with get_cursor() as (cur, _):
-        now   = datetime.utcnow()
-        start = now - timedelta(hours=24)
-        tables = ['blog', 'hikariplus', 'manage', 'todo', 'wishes']
+    conn = mysql.connector.connect(
+        user=conf['user'],
+        password=conf['password'],
+        host=conf['host_db'],
+        database=conf['database']
+    )
+    cur = conn.cursor()
+    now   = datetime.utcnow()
+    start = now - timedelta(hours=24)
+    tables = ['blog', 'hikariplus', 'manage', 'todo', 'wishes']
 
-        unions = " UNION ALL ".join(
-            f"SELECT addr FROM `{t}` WHERE timed >= %s" for t in tables
-        )
-        cur.execute(
-            f"SELECT COUNT(DISTINCT addr) FROM ({unions}) AS u",
-            [start] * len(tables)
-        )
-        return int(cur.fetchone()[0])
+    unions = " UNION ALL ".join(
+        f"SELECT addr FROM `{t}` WHERE timed >= %s" for t in tables
+    )
+    cur.execute(
+        f"SELECT COUNT(DISTINCT addr) FROM ({unions}) AS u",
+        [start] * len(tables)
+    )
+    result = int(cur.fetchone()[0])
+    cur.close()
+    conn.close()
+    return result

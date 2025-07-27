@@ -8,7 +8,6 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-
 TABLES = ['blog', 'hikariplus', 'manage', 'todo', 'wishes']
 
 
