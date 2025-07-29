@@ -29,6 +29,10 @@
     }
     #loader .text-muted {
       font-size: 1.1rem;
+
+      .chart-container canvas {
+        max-height: 280px;
+      }
     }
   </style>
 </head>
@@ -105,7 +109,12 @@ fetch(API_URL)
   .catch(console.error);
 
 function fmtTime(ts) {
-  return new Date(ts).toLocaleDateString([], { day: 'numeric', month: 'short' });
+  const date = new Date(ts);
+  return date.toLocaleDateString([], {
+    day: 'numeric',
+    month: 'short',
+    year: date.getFullYear() !== new Date().getFullYear() ? '2-digit' : undefined
+  });
 }
 function colors() {
   return `hsl(${Math.random() * 360}, 70%, 60%)`;
@@ -149,11 +158,38 @@ function render() {
       data: {
         labels: hits.map(p => fmtTime(p.x)),
         datasets: [
-          { label: 'Hits', data: hits.map(p => p.y), borderColor: '#0d6efd', fill: true, tension: 0.3 },
-          { label: 'Unique IPs', data: unique.map(p => p.y), borderColor: '#198754', fill: true, tension: 0.3 }
+          {
+            label: 'Hits',
+            data: hits.map(p => p.y),
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            fill: true,
+            tension: 0.1,
+            pointRadius: 3
+          },
+          {
+            label: 'Unique IPs',
+            data: unique.map(p => p.y),
+            borderColor: '#198754',
+            backgroundColor: 'rgba(25, 135, 84, 0.1)',
+            fill: true,
+            tension: 0.1,
+            pointRadius: 3
+          }
         ]
       },
-      options: { responsive: true, maintainAspectRatio: false }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45
+            }
+          }
+        }
+      }
     });
   }
 

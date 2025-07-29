@@ -61,30 +61,38 @@ def fetch_for_table(tbl: str):
     """)
 
     # 3. hits_series
+    # Изменяем запросы в функции fetch_for_table:
+
+    # 3. hits_series
     hits = q(f"""
-        SELECT UNIX_TIMESTAMP(timed)*1000 AS x, COUNT(*) AS y
+        SELECT
+          UNIX_TIMESTAMP(DATE(timed))*1000 AS x,
+          COUNT(*) AS y
         FROM `{tbl}`
         WHERE timed >= %s
-        GROUP BY x
+        GROUP BY DATE(timed)
         ORDER BY x
     """, (start,))
 
     # 4. unique_addr_series
     uniq = q(f"""
-        SELECT UNIX_TIMESTAMP(timed)*1000 AS x, COUNT(DISTINCT addr) AS y
+        SELECT
+          UNIX_TIMESTAMP(DATE(timed))*1000 AS x,
+          COUNT(DISTINCT addr) AS y
         FROM `{tbl}`
         WHERE timed >= %s
-        GROUP BY x
+        GROUP BY DATE(timed)
         ORDER BY x
     """, (start,))
 
     # 5. mobile_share_series
     mobile = q(f"""
-        SELECT UNIX_TIMESTAMP(timed)*1000 AS x,
-               SUM(is_mobile='true')/COUNT(*) AS y
+        SELECT
+          UNIX_TIMESTAMP(DATE(timed))*1000 AS x,
+          SUM(is_mobile='true')/COUNT(*) AS y
         FROM `{tbl}`
         WHERE timed >= %s
-        GROUP BY x
+        GROUP BY DATE(timed)
         ORDER BY x
     """, (start,))
 
