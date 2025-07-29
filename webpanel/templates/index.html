@@ -56,7 +56,7 @@
 
   <!-- Charts -->
   <div class="row">
-    <div class="col-lg-8"><div class="card"><div class="card-header">Hits & Unique IPs (24h)</div>
+      <div class="col-lg-8"><div class="card"><div class="card-header">Hits & Unique IPs (30 days)</div>
       <div class="card-body"><div class="chart-container"><canvas id="hitsChart"></canvas></div></div></div></div>
     <div class="col-lg-4"><div class="card"><div class="card-header">Top Endpoints</div>
       <div class="card-body"><div class="chart-container"><canvas id="endpointsChart"></canvas></div></div></div></div>
@@ -105,7 +105,7 @@ fetch(API_URL)
   .catch(console.error);
 
 function fmtTime(ts) {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(ts).toLocaleDateString([], { day: 'numeric', month: 'short' });
 }
 function colors() {
   return `hsl(${Math.random() * 360}, 70%, 60%)`;

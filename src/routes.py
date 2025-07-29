@@ -40,7 +40,7 @@ def fetch_for_table(tbl: str):
     conn = mysql.connector.connect(**DB_CFG)
     cur  = conn.cursor(dictionary=True)
     now  = datetime.utcnow()
-    start = now - timedelta(hours=24)
+    start = now - timedelta(days=31)
 
     def q(sql, params=()):
         cur.execute(sql, params)
