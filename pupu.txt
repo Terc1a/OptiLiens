@@ -1,0 +1,89 @@
+# Analytics Project
+
+Проект для сбора и анализа данных с веб-интерфейсом.
+
+## Структура проекта
+
+.
+├── config.yaml # Конфигурация приложения
+├── conn.py # Утилиты для подключений (HTTP/DB)
+├── log_conf.yaml # Настройки логирования
+├── main2.py # Основной скрипт запуска
+├── requirements.txt # Зависимости Python
+├── src/
+│ ├── database.py # Работа с базой данных (SQLite/PostgreSQL)
+│ ├── logger.py # Логирование событий
+│ └── routes.py # API endpoints (FastAPI/Flask)
+└── webpanel/ # Веб-интерфейс
+├── app.py # Запуск веб-сервера
+├── static/ # CSS/JS файлы
+└── templates/ # HTML шаблоны
+text
+
+
+## Установка
+```bash
+pip install -r requirements.txt
+
+Использование
+
+    Настройте подключения в config.yaml
+
+    Запустите основной модуль:
+
+bash
+
+python main2.py
+
+    Для веб-интерфейса:
+
+bash
+
+python webpanel/app.py
+
+Конфигурация
+
+    Основные параметры: config.yaml
+
+    Логирование: log_conf.yaml
+
+Технологии
+
+    Python 3.10+
+
+    FastAPI/Flask (судя по структуре routes.py)
+
+    SQLAlchemy/Psycopg2 (database.py)
+
+    Jinja2 (шаблоны в webpanel/templates)
+
+
+Укажите нужные эндпоинты в routes.py и пропишите мирроринг для них на стороне веб-сервера:
+
+location / {
+              mirror /mirror;  # Дублируем запрос
+              mirror_request_body on;
+
+              proxy_redirect          http://ip_addr:port /;
+              proxy_pass_header       Server;
+              proxy_set_header        X-Real-IP $remote_addr;
+              proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header        X-Scheme $scheme;
+              proxy_set_header        Host $http_host;
+              proxy_set_header        X-NginX-Proxy true;
+              proxy_connect_timeout   5;
+              proxy_read_timeout      240;
+              proxy_intercept_errors  on;
+
+              proxy_pass              http://http://ip_addr:port;
+}
+location /mirror {
+    internal;
+    access_log /var/log/nginx/mirror.log;
+    error_log /var/log/nginx/mirror_error.log;
+    proxy_pass http://ip_addr:port/endpoint_name$request_uri;  # Сохраняем оригинальный путь
+    proxy_set_header X-Original-Path $request_uri;                # Дублируем в заголовке
+    proxy_ssl_verify off;
+    proxy_set_header Host http://ip_addr:port; # Aдрес API
+    proxy_set_header X-Real-IP $remote_addr;
+}
