@@ -50,16 +50,16 @@ def fetch_for_table(tbl: str):
     total_hits = int(q(f"SELECT COUNT(*) AS c FROM `{tbl}`")[0]['c'])
 
     # 2. recent_rows
-    recent_rows = cur.execute(f"""
+    recent_rows = q(f"""
         SELECT
-          REGEXP_REPLACE(addr, '...') AS addr,
-          endpoint AS name,          -- Важно: используем endpoint как name
-          method, timed, is_mobile,
-          CONCAT(LEFT(user_agent,60),'...') AS user_agent
+        REGEXP_REPLACE(addr, '([0-9]+\\.[0-9]+\\.)[0-9]+\\.[0-9]+', '\\\\1xxx.xxx') AS addr,
+        endpoint AS name,
+        method, timed, is_mobile,
+        CONCAT(LEFT(user_agent, 60), '...') AS user_agent
         FROM `{tbl}`
         ORDER BY timed DESC
         LIMIT 20
-    """).fetchall()
+        """)
 
 
     # 3. hits_series
