@@ -50,19 +50,17 @@ def fetch_for_table(tbl: str):
     total_hits = int(q(f"SELECT COUNT(*) AS c FROM `{tbl}`")[0]['c'])
 
     # 2. recent_rows
-    recent_rows = q(f"""
+    recent_rows = cur.execute(f"""
         SELECT
-        REGEXP_REPLACE(addr, '...') AS addr,
-        destination AS name,           -- Теперь выводим путь (/login) вместо UUID
-        method, timed, is_mobile,
-        CONCAT(LEFT(user_agent,60),'...') AS user_agent
+          REGEXP_REPLACE(addr, '...') AS addr,
+          endpoint AS name,          -- Важно: используем endpoint как name
+          method, timed, is_mobile,
+          CONCAT(LEFT(user_agent,60),'...') AS user_agent
         FROM `{tbl}`
         ORDER BY timed DESC
         LIMIT 20
-    """)
+    """).fetchall()
 
-    # 3. hits_series
-    # Изменяем запросы в функции fetch_for_table:
 
     # 3. hits_series
     hits = q(f"""
@@ -106,12 +104,12 @@ def fetch_for_table(tbl: str):
     )
 
     # 7. top_endpoints
-    top_endpoints = q(
-        "SELECT endpoint AS label, COUNT(*) AS value  "
+    top_endpoints = cur.execute(
+        "SELECT endpoint AS label, COUNT(*) AS value "
         f"FROM `{tbl}` WHERE timed >= %s "
-        "GROUP BY name ORDER BY endpoint DESC LIMIT 5",
+        "GROUP BY endpoint ORDER BY value DESC LIMIT 5",
         (start,)
-    )
+    ).fetchall()
 
     # 8. ua_breakdown
     ua = q(f"""
