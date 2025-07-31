@@ -105,9 +105,9 @@ def fetch_for_table(tbl: str):
 
     # 7. top_endpoints
     top_endpoints = cur.execute(
-        "SELECT endpoint AS label, COUNT(*) AS value "
+        "SELECT direction AS label, COUNT(*) AS value "
         f"FROM `{tbl}` WHERE timed >= %s "
-        "GROUP BY endpoint ORDER BY value DESC LIMIT 5",
+        "GROUP BY direction ORDER BY value DESC LIMIT 5",
         (start,)
     ).fetchall()
 
