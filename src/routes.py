@@ -53,7 +53,7 @@ def fetch_for_table(tbl: str):
     recent_rows = q(f"""
         SELECT
         REGEXP_REPLACE(addr, '([0-9]+\\.[0-9]+\\.)[0-9]+\\.[0-9]+', '\\\\1xxx.xxx') AS addr,
-        endpoint AS name,
+        direction AS name,
         method, timed, is_mobile,
         CONCAT(LEFT(user_agent, 60), '...') AS user_agent
         FROM `{tbl}`
@@ -97,7 +97,7 @@ def fetch_for_table(tbl: str):
 
     # 6. top_methods
     top_methods = q(
-        "SELECT destination AS label, COUNT(*) AS value  "
+        "SELECT direction AS label, COUNT(*) AS value  "
         f"FROM `{tbl}` WHERE timed >= %s "
         "GROUP BY method ORDER BY value DESC LIMIT 5",
         (start,)
