@@ -155,7 +155,7 @@ async def analyze(request: Request):
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
     original_path = request.headers.get("x-original-path", "/")
-
+    logger.info(f"Request to {original_path} from {client_ip}")
     logger.info(
         f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
     )
@@ -192,7 +192,7 @@ async def analyze(request: Request):
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
     original_path = request.headers.get("x-original-path", "/")
-
+    logger.info(f"Request to {original_path} from {client_ip}")
     logger.info(
         f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
     )
@@ -229,7 +229,7 @@ async def analyze(request: Request):
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
     original_path = request.headers.get("x-original-path", "/")
-
+    logger.info(f"Request to {original_path} from {client_ip}")
     logger.info(
         f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
     )
@@ -266,7 +266,7 @@ async def analyze(request: Request):
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
     original_path = request.headers.get("x-original-path", "/")
-
+    logger.info(f"Request to {original_path} from {client_ip}")
     logger.info(
         f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
     )
@@ -303,6 +303,7 @@ async def analyze(request: Request):
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
     original_path = request.headers.get("x-original-path", "/")
+    logger.info(f"Request to {original_path} from {client_ip}")
     logger.info(
         f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua} OP={original_path}"
     )
