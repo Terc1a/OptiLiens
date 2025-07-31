@@ -59,7 +59,7 @@ def fetch_for_table(tbl: str):
         FROM `{tbl}`
         ORDER BY timed DESC
         LIMIT 20
-        """, (start,))
+    """) 
 
 
     # 3. hits_series
@@ -97,14 +97,14 @@ def fetch_for_table(tbl: str):
 
     # 6. top_methods
     top_methods = q(
-        "SELECT direction AS label, COUNT(*) AS value  "
+        "SELECT direction AS label, COUNT(*) AS value "
         f"FROM `{tbl}` WHERE timed >= %s "
-        "GROUP BY method ORDER BY value DESC LIMIT 5",
+        "GROUP BY direction ORDER BY value DESC LIMIT 5",
         (start,)
     )
 
     # 7. top_endpoints
-    top_endpoints = cur.execute(
+    top_endpoints = q(
         "SELECT direction AS label, COUNT(*) AS value "
         f"FROM `{tbl}` WHERE timed >= %s "
         "GROUP BY direction ORDER BY value DESC LIMIT 5",
