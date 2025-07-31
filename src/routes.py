@@ -52,9 +52,10 @@ def fetch_for_table(tbl: str):
     # 2. recent_rows
     recent_rows = q(f"""
         SELECT
-          REGEXP_REPLACE(addr,'([0-9]+\\\\.[0-9]+\\\\.)[0-9]+\\\\.[0-9]+','$1xxx.xxx') AS addr,
-          name, method, timed, is_mobile,
-          CONCAT(LEFT(user_agent,60),'...') AS user_agent
+        REGEXP_REPLACE(addr, '...') AS addr,
+        destination AS name,           -- Теперь выводим путь (/login) вместо UUID
+        method, timed, is_mobile,
+        CONCAT(LEFT(user_agent,60),'...') AS user_agent
         FROM `{tbl}`
         ORDER BY timed DESC
         LIMIT 20
@@ -98,7 +99,7 @@ def fetch_for_table(tbl: str):
 
     # 6. top_methods
     top_methods = q(
-        "SELECT method AS label, COUNT(*) AS value "
+        "SELECT destination AS label, COUNT(*) AS value  "
         f"FROM `{tbl}` WHERE timed >= %s "
         "GROUP BY method ORDER BY value DESC LIMIT 5",
         (start,)
@@ -106,9 +107,9 @@ def fetch_for_table(tbl: str):
 
     # 7. top_endpoints
     top_endpoints = q(
-        "SELECT name AS label, COUNT(*) AS value "
+        "SELECT endpoint AS label, COUNT(*) AS value  "
         f"FROM `{tbl}` WHERE timed >= %s "
-        "GROUP BY name ORDER BY value DESC LIMIT 5",
+        "GROUP BY name ORDER BY endpoint DESC LIMIT 5",
         (start,)
     )
 
@@ -155,6 +156,7 @@ async def analyze(request: Request):
     ua = request.headers.get("user-agent", "")
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
+    original_path = request.headers.get("x-original-path", "/")
 
     logger.info(
         f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
@@ -172,9 +174,9 @@ async def analyze(request: Request):
         # Записываем визит
         cur.execute(
             """INSERT INTO hikariplus
-               (addr, name, method, timed, is_mobile, user_agent)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (client_ip, name, request.method, datetime.now(), is_mobile, short_ua)
+               (addr, name, direction, method, timed, is_mobile, user_agent)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, short_ua)
         )
 
     return {"message": "ok"}
@@ -191,6 +193,7 @@ async def analyze(request: Request):
     ua = request.headers.get("user-agent", "")
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
+    original_path = request.headers.get("x-original-path", "/")
 
     logger.info(
         f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
@@ -208,9 +211,9 @@ async def analyze(request: Request):
         # Записываем визит
         cur.execute(
             """INSERT INTO wishes
-               (addr, name, method, timed, is_mobile, user_agent)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (client_ip, name, request.method, datetime.now(), is_mobile, short_ua)
+               (addr, name, direction, method, timed, is_mobile, user_agent)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, short_ua)
         )
 
     return {"message": "ok"}
@@ -227,6 +230,7 @@ async def analyze(request: Request):
     ua = request.headers.get("user-agent", "")
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
+    original_path = request.headers.get("x-original-path", "/")
 
     logger.info(
         f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
@@ -244,9 +248,9 @@ async def analyze(request: Request):
         # Записываем визит
         cur.execute(
             """INSERT INTO manage
-               (addr, name, method, timed, is_mobile, user_agent)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (client_ip, name, request.method, datetime.now(), is_mobile, short_ua)
+               (addr, name, direction, method, timed, is_mobile, user_agent)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, short_ua)
         )
 
     return {"message": "ok"}
@@ -263,6 +267,7 @@ async def analyze(request: Request):
     ua = request.headers.get("user-agent", "")
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
+    original_path = request.headers.get("x-original-path", "/")
 
     logger.info(
         f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
@@ -280,9 +285,9 @@ async def analyze(request: Request):
         # Записываем визит
         cur.execute(
             """INSERT INTO blog
-               (addr, name, method, timed, is_mobile, user_agent)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (client_ip, name, request.method, datetime.now(), is_mobile, short_ua)
+               (addr, name, direction, method, timed, is_mobile, user_agent)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, short_ua)
         )
 
     return {"message": "ok"}
@@ -299,9 +304,9 @@ async def analyze(request: Request):
     ua = request.headers.get("user-agent", "")
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
-
+    original_path = request.headers.get("x-original-path", "/")
     logger.info(
-        f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
+        f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua} OP={original_path}"
     )
 
     with get_cursor() as (cur, _):
@@ -316,9 +321,9 @@ async def analyze(request: Request):
         # Записываем визит
         cur.execute(
             """INSERT INTO todo
-               (addr, name, method, timed, is_mobile, user_agent)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (client_ip, name, request.method, datetime.now(), is_mobile, short_ua)
+               (addr, name, direction, method, timed, is_mobile, user_agent)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, short_ua)
         )
 
     return {"message": "ok"}
@@ -385,3 +390,10 @@ async def pub_dash():
 
     # сериализуем Decimal/datetime и т.д.
     return JSONResponse(content=json.loads(json.dumps(payload, default=json_serial)))
+
+
+#ToDo
+# Обновить дашборд под работу с маршрутами
+# Сделать подробный ридми к аналитике
+# Добавить больше логов
+# Переименовать async defs из analyze в уникальные
