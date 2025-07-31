@@ -109,7 +109,7 @@ def fetch_for_table(tbl: str):
         f"FROM `{tbl}` WHERE timed >= %s "
         "GROUP BY direction ORDER BY value DESC LIMIT 5",
         (start,)
-    ).fetchall()
+    )
 
     # 8. ua_breakdown
     ua = q(f"""
