@@ -150,7 +150,7 @@ def fetch_for_table(tbl: str):
     }
 
 @router.get("/home/{path:path}")            # mirroring для hikariplus.ru
-async def analyze(request: Request):
+async def analyze_home(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (
         request.headers.get("x-real-ip") or
@@ -187,7 +187,7 @@ async def analyze(request: Request):
 
 
 @router.get("/wishes/{path:path}")            # mirroring для wish.hikariplus.ru
-async def analyze(request: Request):
+async def analyze_wishes(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (
         request.headers.get("x-real-ip") or
@@ -224,7 +224,7 @@ async def analyze(request: Request):
 
 
 @router.get("/manage/{path:path}")            # mirroring для manage.hikariplus.ru
-async def analyze(request: Request):
+async def analyze_manage(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (
         request.headers.get("x-real-ip") or
@@ -261,7 +261,7 @@ async def analyze(request: Request):
 
 
 @router.get("/blog/{path:path}")            # mirroring для blog.hikariplus.ru
-async def analyze(request: Request):
+async def analyze_blog(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (
         request.headers.get("x-real-ip") or
@@ -298,7 +298,7 @@ async def analyze(request: Request):
 
 
 @router.get("/todo/{path:path}")            # mirroring для todo.hikariplus.ru
-async def analyze(request: Request):
+async def analyze_todo(request: Request):
     """Главный обработчик корневого пути /"""
     client_ip = (
         request.headers.get("x-real-ip") or
@@ -398,5 +398,4 @@ async def pub_dash():
 
 
 #ToDo
-# Сделать подробный ридми к аналитике
 # Переименовать async defs из analyze в уникальные
