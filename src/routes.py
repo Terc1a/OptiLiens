@@ -51,14 +51,21 @@ def fetch_for_table(tbl: str):
 
     # 2. recent_rows
     recent_rows = q(f"""
-        SELECT
-        REGEXP_REPLACE(addr, '([0-9]+\\.[0-9]+\\.)[0-9]+\\.[0-9]+', '\\\\1xxx.xxx') AS addr,
-        direction AS name,
-        method, timed, is_mobile,
-        CONCAT(LEFT(user_agent, 60), '...') AS user_agent
-        FROM `{tbl}`
-        ORDER BY timed DESC
-        LIMIT 20
+SELECT
+    CONCAT(
+        SUBSTRING(addr, 1, LOCATE('.', addr) - 1), '.',
+        SUBSTRING(addr, LOCATE('.', addr) + 1, LOCATE('.', addr, LOCATE('.', addr) + 1) - LOCATE('.', addr) - 1), '.',
+        SUBSTRING(addr, LOCATE('.', addr, LOCATE('.', addr) + 1) + 1, LOCATE('.', addr, LOCATE('.', addr, LOCATE('.', addr) + 1) + 1) - LOCATE('.', addr, LOCATE('.', addr) + 1) - 1),
+        '.xxx'
+    ) AS masked_addr,
+    direction AS name,
+    method,
+    timed,
+    is_mobile,
+    CONCAT(LEFT(user_agent, 60), '...') AS user_agent
+FROM `{tbl}`
+ORDER BY timed DESC
+LIMIT 5;
     """) 
 
 
