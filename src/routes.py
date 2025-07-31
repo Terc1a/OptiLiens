@@ -59,7 +59,7 @@ def fetch_for_table(tbl: str):
         FROM `{tbl}`
         ORDER BY timed DESC
         LIMIT 20
-        """)
+        """, (start,))
 
 
     # 3. hits_series
