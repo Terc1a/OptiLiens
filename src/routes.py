@@ -50,23 +50,22 @@ def fetch_for_table(tbl: str):
     total_hits = int(q(f"SELECT COUNT(*) AS c FROM `{tbl}`")[0]['c'])
 
     # 2. recent_rows
+# В функции fetch_for_table() замените запрос recent_rows на:
     recent_rows = q(f"""
-SELECT
-    CONCAT(
-        SUBSTRING(addr, 1, LOCATE('.', addr) - 1), '.',
-        SUBSTRING(addr, LOCATE('.', addr) + 1, LOCATE('.', addr, LOCATE('.', addr) + 1) - LOCATE('.', addr) - 1), '.',
-        SUBSTRING(addr, LOCATE('.', addr, LOCATE('.', addr) + 1) + 1, LOCATE('.', addr, LOCATE('.', addr, LOCATE('.', addr) + 1) + 1) - LOCATE('.', addr, LOCATE('.', addr) + 1) - 1),
-        '.xxx'
-    ) AS masked_addr,
-    direction AS name,
-    method,
-    timed,
-    is_mobile,
-    CONCAT(LEFT(user_agent, 60), '...') AS user_agent
-FROM `{tbl}`
-ORDER BY timed DESC
-LIMIT 5;
-    """) 
+        SELECT
+            CONCAT(
+                SUBSTRING_INDEX(addr, '.', 1), '.',
+                SUBSTRING_INDEX(SUBSTRING_INDEX(addr, '.', 2), '.', -1), '.',
+                SUBSTRING_INDEX(SUBSTRING_INDEX(addr, '.', 3), '.', -1),
+                '.xxx'
+            ) AS addr,
+            direction AS name,
+            method, timed, is_mobile,
+            CONCAT(LEFT(user_agent, 60), '...') AS user_agent
+        FROM `{tbl}`
+        ORDER BY timed DESC
+        LIMIT 20
+    """)
 
 
     # 3. hits_series
