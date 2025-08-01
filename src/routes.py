@@ -86,9 +86,7 @@ def fetch_for_table(tbl: str):
           COUNT(DISTINCT addr) AS y
         FROM `{tbl}`
         WHERE timed >= %s
-        GROUP BY DATE(timed)
-        ORDER BY x
-    """, (start,))
+    """, (now,))
 
     # 5. mobile_share_series
     mobile = q(f"""
