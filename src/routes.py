@@ -223,31 +223,26 @@ async def analyze_wishes(request: Request):
     return {"message": "ok"}
 
 
-@router.get("/manage/{path:path}")            # mirroring для manage.hikariplus.ru
+@router.get("/manage/{path:path}")
 async def analyze_manage(request: Request):
     """Главный обработчик корневого пути /"""
-    def get_client_ip(request: Request) -> str:
-        # Проверяем X-Real-IP (если есть)
+    # Получаем IP с учетом цепочки прокси
+    def get_client_ip(request):
         if x_real_ip := request.headers.get("x-real-ip"):
             return x_real_ip.split(",")[0].strip()
-
-        # Проверяем X-Forwarded-For (может быть цепочка IP)
         if x_forwarded_for := request.headers.get("x-forwarded-for"):
             return x_forwarded_for.split(",")[0].strip()
-
-        # Если заголовков нет, берем client.host
         return request.client.host
 
     client_ip = get_client_ip(request)
-
     ua = request.headers.get("user-agent", "")
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
-    original_path = request.headers.get("x-original-path", "/")
+    original_path = request.headers.get("x-original-path", str(request.url.path))
+
+    # Логируем для отладки
     logger.info(f"Request to {original_path} from {client_ip}")
-    logger.info(
-        f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
-    )
+    logger.info(f"Headers: {dict(request.headers)}")
 
     with get_cursor() as (cur, _):
         # Есть ли такой IP?
