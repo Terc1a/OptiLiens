@@ -82,11 +82,13 @@ def fetch_for_table(tbl: str):
     # 4. unique_addr_series
     uniq = q(f"""
         SELECT
-          UNIX_TIMESTAMP(DATE(timed))*1000 AS x,
-          COUNT(DISTINCT addr) AS y
+            FLOOR(UNIX_TIMESTAMP(timed)/3600)*3600*1000 AS x,
+            COUNT(DISTINCT addr) AS y
         FROM `{tbl}`
-        WHERE timed >= %s
-    """, (now,))
+        WHERE timed >= NOW() - INTERVAL 1 DAY
+        GROUP BY x/3600000
+        ORDER BY x
+    """)
 
     # 5. mobile_share_series
     mobile = q(f"""
