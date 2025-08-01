@@ -143,6 +143,7 @@ def fetch_for_table(tbl: str):
     # отдаём словарь (всё уже int/float/str)
     return {
         "total_hits": total_hits,
+        "unique_ips_24h": unique_ips_24h,
         "recent_rows": recent_rows,
         "hits_series": hits,
         "unique_addr_series": uniq,
@@ -379,8 +380,7 @@ async def stats():
 async def pub_dash():
     now = datetime.utcnow()
     services = {tbl: fetch_for_table(tbl) for tbl in TABLES}
-
-    # Глобальный подсчет уникальных IP
+    logger.info(f"Wishes unique_ips_24h: {services['wishes']['unique_ips_24h']}")    # Глобальный подсчет уникальных IP
     conn = mysql.connector.connect(**DB_CFG)
     cur = conn.cursor()
 
