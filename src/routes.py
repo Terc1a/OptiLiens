@@ -51,11 +51,10 @@ def fetch_for_table(tbl: str):
 
     # 2. unique_ips_24h
     unique_ips_24h = int(q(f"""
-        SELECT COUNT(DISTINCT addr) AS c
-        FROM `{tbl}`
+        SELECT COUNT(DISTINCT addr) AS c 
+        FROM `{tbl}` 
         WHERE timed >= NOW() - INTERVAL 24 HOUR
     """)[0]['c'])
-
     # 3. recent_rows
     recent_rows = q(f"""
         SELECT
