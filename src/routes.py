@@ -226,11 +226,20 @@ async def analyze_wishes(request: Request):
 @router.get("/manage/{path:path}")            # mirroring для manage.hikariplus.ru
 async def analyze_manage(request: Request):
     """Главный обработчик корневого пути /"""
-    client_ip = (
-        request.headers.get("x-real-ip") or
-        request.headers.get("x-forwarded-for") or
-        request.client.host
-    )
+    def get_client_ip(request: Request) -> str:
+        # Проверяем X-Real-IP (если есть)
+        if x_real_ip := request.headers.get("x-real-ip"):
+            return x_real_ip.split(",")[0].strip()
+
+        # Проверяем X-Forwarded-For (может быть цепочка IP)
+        if x_forwarded_for := request.headers.get("x-forwarded-for"):
+            return x_forwarded_for.split(",")[0].strip()
+
+        # Если заголовков нет, берем client.host
+        return request.client.host
+
+    client_ip = get_client_ip(request)
+
     ua = request.headers.get("user-agent", "")
     short_ua = ua.split()[0] if ua else "Unknown"
     is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
@@ -395,7 +404,3 @@ async def pub_dash():
 
     # сериализуем Decimal/datetime и т.д.
     return JSONResponse(content=json.loads(json.dumps(payload, default=json_serial)))
-
-
-#ToDo
-# Переименовать async defs из analyze в уникальные
