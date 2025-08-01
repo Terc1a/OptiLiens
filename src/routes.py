@@ -38,8 +38,8 @@ def json_serial(obj):
 # ---------- вспомогательная функция ----------
 def fetch_for_table(tbl: str):
     conn = mysql.connector.connect(**DB_CFG)
-    cur  = conn.cursor(dictionary=True)
-    now  = datetime.utcnow()
+    cur = conn.cursor(dictionary=True)
+    now = datetime.utcnow()
     start = now - timedelta(days=31)
 
     def q(sql, params=()):
@@ -49,8 +49,14 @@ def fetch_for_table(tbl: str):
     # 1. total_hits
     total_hits = int(q(f"SELECT COUNT(*) AS c FROM `{tbl}`")[0]['c'])
 
-    # 2. recent_rows
-# В функции fetch_for_table() замените запрос recent_rows на:
+    # 2. unique_ips_24h
+    unique_ips_24h = int(q(f"""
+        SELECT COUNT(DISTINCT addr) AS c
+        FROM `{tbl}`
+        WHERE timed >= NOW() - INTERVAL 24 HOUR
+    """)[0]['c'])
+
+    # 3. recent_rows
     recent_rows = q(f"""
         SELECT
             CONCAT(
@@ -375,9 +381,11 @@ async def pub_dash():
     now = datetime.utcnow()
     services = {tbl: fetch_for_table(tbl) for tbl in TABLES}
 
-    # глобальный unique_ips
+    # Глобальный подсчет уникальных IP
     conn = mysql.connector.connect(**DB_CFG)
     cur = conn.cursor()
+
+    # Подсчет уникальных IP за 24 часа для всех сервисов
     unions = " UNION ALL ".join(
         f"SELECT addr FROM `{t}` WHERE timed >= %s" for t in TABLES
     )
@@ -394,9 +402,9 @@ async def pub_dash():
         "global": {
             "last_update": now.isoformat(timespec='seconds') + 'Z',
             "total_hits": sum(s["total_hits"] for s in services.values()),
-            "total_unique_ips": global_unique
+            "total_unique_ips": global_unique,
+            "unique_ips_24h": global_unique  # Дублируем для удобства
         }
     }
 
-    # сериализуем Decimal/datetime и т.д.
     return JSONResponse(content=json.loads(json.dumps(payload, default=json_serial)))
