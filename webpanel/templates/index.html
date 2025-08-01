@@ -126,7 +126,10 @@ function render() {
 
   /* KPI */
   document.getElementById('kpiTotal').textContent     = (d.total_hits || 0).toLocaleString();
-  document.getElementById('kpiUnique').textContent  = (d.total_unique_ips || 0).toLocaleString();
+  document.getElementById('kpiUnique').textContent = (
+    d.unique_ips_24h ||
+    (d.unique_addr_series?.slice(-1)[0]?.y || 0)
+  ).toLocaleString();
   document.getElementById('kpiMobile').textContent  = ((d.mobile_share_series?.slice(-1)[0]?.y || 0) * 100).toFixed(1) + '%';
   document.getElementById('kpiEndpoints').textContent = (d.top_endpoints || []).length;
 
