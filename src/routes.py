@@ -188,20 +188,21 @@ async def analyze_home(request: Request):
 
 @router.get("/wishes/{path:path}")            # mirroring для wish.hikariplus.ru
 async def analyze_wishes(request: Request):
-    """Главный обработчик корневого пути /"""
-    client_ip = (
-        request.headers.get("x-real-ip") or
-        request.headers.get("x-forwarded-for") or
-        request.client.host
-    )
-    ua = request.headers.get("user-agent", "")
+    """Получаем реальный IP клиента из X-Forwarded-For"""
+    def get_client_ip(request):
+        if x_forwarded_for := request.headers.get("x-forwarded-for"):
+            return x_forwarded_for.split(",")[0].strip()  # Берём первый IP
+        if x_real_ip := request.headers.get("x-real-ip"):
+            return x_real_ip
+        return request.client.host
+
+    client_ip = get_client_ip(request)
+    ua = request.headers.get("user-agent", "Unknown")
     short_ua = ua.split()[0] if ua else "Unknown"
-    is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
-    original_path = request.headers.get("x-original-path", "/")
-    logger.info(f"Request to {original_path} from {client_ip}")
-    logger.info(
-        f"{request.method} {client_ip} mobile={is_mobile} UA={short_ua}"
-    )
+    is_mobile = "iPhone" in ua or "Android" in ua
+    original_path = request.headers.get("x-original-path", str(request.url.path))
+
+    logger.info(f"Real client IP: {client_ip}")
 
     with get_cursor() as (cur, _):
         # Есть ли такой IP?
@@ -225,24 +226,21 @@ async def analyze_wishes(request: Request):
 
 @router.get("/manage/{path:path}")
 async def analyze_manage(request: Request):
-    """Главный обработчик корневого пути /"""
-    # Получаем IP с учетом цепочки прокси
+    """Получаем реальный IP клиента из X-Forwarded-For"""
     def get_client_ip(request):
-        if x_real_ip := request.headers.get("x-real-ip"):
-            return x_real_ip.split(",")[0].strip()
         if x_forwarded_for := request.headers.get("x-forwarded-for"):
-            return x_forwarded_for.split(",")[0].strip()
+            return x_forwarded_for.split(",")[0].strip()  # Берём первый IP
+        if x_real_ip := request.headers.get("x-real-ip"):
+            return x_real_ip
         return request.client.host
 
     client_ip = get_client_ip(request)
-    ua = request.headers.get("user-agent", "")
+    ua = request.headers.get("user-agent", "Unknown")
     short_ua = ua.split()[0] if ua else "Unknown"
-    is_mobile = request.headers.get("sec-ch-ua-platform") == '"Android"'
+    is_mobile = "iPhone" in ua or "Android" in ua
     original_path = request.headers.get("x-original-path", str(request.url.path))
 
-    # Логируем для отладки
-    logger.info(f"Request to {original_path} from {client_ip}")
-    logger.info(f"Headers: {dict(request.headers)}")
+    logger.info(f"Real client IP: {client_ip}")
 
     with get_cursor() as (cur, _):
         # Есть ли такой IP?
