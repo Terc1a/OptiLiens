@@ -125,20 +125,18 @@ def fetch_for_table(tbl: str):
     # 8. ua_breakdown
     ua = q(f"""
         SELECT
-          CASE
-            WHEN user_agent LIKE '%%Chrome%%' THEN 'Chrome'
-            WHEN user_agent LIKE '%%Firefox%%' THEN 'Firefox'
-            WHEN user_agent LIKE '%%Safari%%' THEN 'Safari'
-            ELSE 'Other'
-          END AS label,
-          COUNT(*) AS value
+            CASE
+                WHEN user_agent REGEXP 'Chrome/[0-9]' THEN 'Chrome'
+                WHEN user_agent REGEXP 'Firefox/[0-9]' THEN 'Firefox'
+                WHEN user_agent REGEXP 'Safari/[0-9]' AND user_agent NOT REGEXP 'Chrome/[0-9]' THEN 'Safari'
+                ELSE 'Other'
+            END AS label,
+            COUNT(*) AS value
         FROM `{tbl}`
         WHERE timed >= %s
         GROUP BY label
     """, (start,))
 
-    cur.close()
-    conn.close()
 
     # отдаём словарь (всё уже int/float/str)
     return {
@@ -167,7 +165,7 @@ async def analyze_home(request: Request):
 
     client_ip = get_client_ip(request)
     ua = request.headers.get("user-agent", "Unknown")
-    short_ua = ua.split()[0] if ua else "Unknown"
+    user_agent = ua if ua else "Unknown"
     is_mobile = "iPhone" in ua or "Android" in ua
     original_path = request.headers.get("x-original-path", str(request.url.path))
 
@@ -187,7 +185,7 @@ async def analyze_home(request: Request):
             """INSERT INTO hikariplus
                (addr, name, direction, method, timed, is_mobile, user_agent)
                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, short_ua)
+            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, user_agent)
         )
 
     return {"message": "ok"}
@@ -205,7 +203,7 @@ async def analyze_wishes(request: Request):
 
     client_ip = get_client_ip(request)
     ua = request.headers.get("user-agent", "Unknown")
-    short_ua = ua.split()[0] if ua else "Unknown"
+    user_agent = ua if ua else "Unknown"
     is_mobile = "iPhone" in ua or "Android" in ua
     original_path = request.headers.get("x-original-path", str(request.url.path))
 
@@ -225,7 +223,7 @@ async def analyze_wishes(request: Request):
             """INSERT INTO wishes
                (addr, name, direction, method, timed, is_mobile, user_agent)
                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, short_ua)
+            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, user_agent)
         )
 
     return {"message": "ok"}
@@ -243,7 +241,7 @@ async def analyze_manage(request: Request):
 
     client_ip = get_client_ip(request)
     ua = request.headers.get("user-agent", "Unknown")
-    short_ua = ua.split()[0] if ua else "Unknown"
+    user_agent = ua if ua else "Unknown"
     is_mobile = "iPhone" in ua or "Android" in ua
     original_path = request.headers.get("x-original-path", str(request.url.path))
 
@@ -263,7 +261,7 @@ async def analyze_manage(request: Request):
             """INSERT INTO manage
                (addr, name, direction, method, timed, is_mobile, user_agent)
                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, short_ua)
+            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, user_agent)
         )
 
     return {"message": "ok"}
@@ -281,7 +279,7 @@ async def analyze_blog(request: Request):
 
     client_ip = get_client_ip(request)
     ua = request.headers.get("user-agent", "Unknown")
-    short_ua = ua.split()[0] if ua else "Unknown"
+    user_agent = ua if ua else "Unknown"
     is_mobile = "iPhone" in ua or "Android" in ua
     original_path = request.headers.get("x-original-path", str(request.url.path))
 
@@ -301,7 +299,7 @@ async def analyze_blog(request: Request):
             """INSERT INTO blog
                (addr, name, direction, method, timed, is_mobile, user_agent)
                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, short_ua)
+            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, user_agent)
         )
 
     return {"message": "ok"}
@@ -319,7 +317,7 @@ async def analyze_todo(request: Request):
 
     client_ip = get_client_ip(request)
     ua = request.headers.get("user-agent", "Unknown")
-    short_ua = ua.split()[0] if ua else "Unknown"
+    user_agent = ua if ua else "Unknown"
     is_mobile = "iPhone" in ua or "Android" in ua
     original_path = request.headers.get("x-original-path", str(request.url.path))
 
@@ -339,7 +337,7 @@ async def analyze_todo(request: Request):
             """INSERT INTO todo
                (addr, name, direction, method, timed, is_mobile, user_agent)
                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, short_ua)
+            (client_ip, name, original_path, request.method, datetime.now(), is_mobile, user_agent)
         )
 
     return {"message": "ok"}
