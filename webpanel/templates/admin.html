@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analytics Admin</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .sidebar { width: 200px; background: #2c3e50; height: 100vh; float: left; color: white; }
+        .content { margin-left: 200px; padding: 20px; }
+        .menu-item { padding: 15px; cursor: pointer; border-bottom: 1px solid #34495e; }
+        .menu-item:hover { background: #34495e; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .stat-card { background: #f8f9fa; border-radius: 5px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="menu-item" style="background: #34495e;">ANALYTICS ADMIN</div>
+        <div class="menu-item">Dashboard</div>
+        <div class="menu-item">Users</div>
+        <div class="menu-item">Statistics</div>
+        <div class="menu-item">Settings</div>
+    </div>
+
+    <div class="content">
+        <h1>Dashboard</h1>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Visits</h3>
+                <p style="font-size: 24px; font-weight: bold;">1,245</p>
+            </div>
+            <div class="stat-card">
+                <h3>Unique Users</h3>
+                <p style="font-size: 24px; font-weight: bold;">893</p>
+            </div>
+            <div class="stat-card">
+                <h3>Avg. Session</h3>
+                <p style="font-size: 24px; font-weight: bold;">2m 45s</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <h2>Recent Activity</h2>
+            <ul>
+                <li>User registration: user123 (10 min ago)</li>
+                <li>Page /products visited 42 times</li>
+                <li>Server backup completed</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

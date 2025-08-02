@@ -89,6 +89,9 @@ def refresher():
         return jsonify(success=True, rc=rc, uc=uc, ucounter=uc[:9], mc=mc, mcounter=mc[:9])
 
 
+@app.route('/admin')
+def dashboard():
+    return render_template('admin.html')
 
 
 
