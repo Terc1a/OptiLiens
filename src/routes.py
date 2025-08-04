@@ -99,7 +99,7 @@ def fetch_for_table(tbl: str):
     mobile = q(f"""
         SELECT
           UNIX_TIMESTAMP(DATE(timed))*1000 AS x,
-          SUM(is_mobile='true')/COUNT(*) AS y
+          SUM(is_mobile=1)/COUNT(*) AS y
         FROM `{tbl}`
         WHERE timed >= %s
         GROUP BY DATE(timed)
