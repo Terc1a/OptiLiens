@@ -143,7 +143,7 @@ function render() {
       <td>${r.name}</td>
       <td><span class="badge bg-secondary">${r.method}</span></td>
       <td><code>${r.addr}</code></td>
-      <td>${r.is_mobile === 1 ? '✅' : '❌'}</td>
+      <td>${r.is_mobile === '1' ? '✅' : '❌'}</td>
       <td class="text-truncate" style="max-width:200px">${r.user_agent}</td>`;
     tbody.appendChild(tr);
   });
