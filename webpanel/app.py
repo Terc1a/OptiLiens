@@ -94,8 +94,5 @@ def dashboard():
     return render_template('admin.html')
 
 
-
-
-
 if __name__ == "__main__":
     app.run(debug=True, host='192.168.0.5', port='5000')

@@ -291,3 +291,52 @@ async def pub_dash():
     return JSONResponse(content=json.loads(json.dumps(payload, default=json_serial)))
 
 
+def create_service_router(service_name: str) -> APIRouter:
+    """Создаёт роутер для указанного сервиса"""
+    router = APIRouter()
+
+    @router.get(f"/{service_name}/{{path:path}}")
+    async def analyze_service(request: Request):
+        """Получаем реальный IP клиента из X-Forwarded-For"""
+        def get_client_ip(request):
+            if x_forwarded_for := request.headers.get("x-forwarded-for"):
+                return x_forwarded_for.split(",")[0].strip()  # Берём первый IP
+            if x_real_ip := request.headers.get("x-real-ip"):
+                return x_real_ip
+            return request.client.host
+        
+        client_ip = get_client_ip(request)
+        ua = request.headers.get("user-agent", "Unknown")
+        user_agent = ua if ua else "Unknown"
+        is_mobile = "iPhone" in ua or "Android" in ua
+        original_path = request.headers.get("x-original-path", str(request.url.path))
+
+        with get_cursor() as (cur, _):
+            cur.execute(f"SELECT name FROM {service_name} WHERE addr=%s LIMIT 1", (client_ip,))
+            row = cur.fetchone()
+            name = row[0] if row else str(uuid.uuid4())
+
+            cur.execute(
+                f"""INSERT INTO {service_name}
+                   (addr, name, direction, method, timed, is_mobile, user_agent)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (client_ip, name, original_path, request.method, datetime.now(), is_mobile, user_agent)
+            )
+
+        return {"message": "ok"}
+    
+    return router
+
+
+@router.post("/register_service")
+async def register_service(service_name: str):
+    # Проверка существования такого сервиса
+    # Создание таблицы сервиса
+    # Добавление в registered_services
+    # Тестирование(пингом или вроде того)
+    # Возврат успешного ответа + статуса
+    pass
+
+#TODO
+#Админка + авторизация в ней
+# register_service(через админку)

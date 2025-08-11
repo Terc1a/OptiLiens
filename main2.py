@@ -4,6 +4,9 @@ from src.logger import logger
 from datetime import datetime
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
+from src.database import get_cursor
+from src.routes import router as base_router  # Импортируем основной роутер (с `/stats` и другими общими эндпоинтами)
+from src.routes import create_service_router  # Импортируем фабрику роутеров (её добавим в routes.py)
 
 app = FastAPI()
 
@@ -22,8 +25,25 @@ async def log_all(request: Request, call_next):
     logger.info(f"{request.method} {request.url} -> {response.status_code} ({took:.3f}s)")
     return response
 
-# ОДНА строчка — router отдаёт и "/" и "/stats"
-app.include_router(router)
+
+# --- 1. Функция для получения списка активных сервисов ---
+def get_active_services():
+    """Возвращает список сервисов, для которых нужно создать роутеры."""
+    with get_cursor() as (cur, _):
+        cur.execute("SHOW TABLES")  # Получаем все таблицы в БД
+        tables = [row[0] for row in cur.fetchall()]
+        # Фильтруем только таблицы сервисов (исключаем системные, например, 'users')
+        service_tables = [tbl for tbl in tables if tbl not in ["users"]]
+        return service_tables
+
+# --- 2. Динамическая регистрация роутеров для всех сервисов ---
+for service_name in get_active_services():
+    service_router = create_service_router(service_name)  # Создаём роутер
+    app.include_router(service_router)  # Регистрируем его в приложении
+
+# --- 3. Подключаем основной роутер (со статическими эндпоинтами, например, `/stats`) ---
+app.include_router(base_router)
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="192.168.0.5", port=5556)
