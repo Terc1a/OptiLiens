@@ -3,3 +3,4 @@ user: analytics
 password: Zksj-dhfsee87
 database: analytics
 charset: utf8mb4
+SECRET_KEY: D49H384ew4u3w98457ft

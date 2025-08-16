@@ -1,12 +1,12 @@
 from fastapi import FastAPI, Request
-from src.routes import router           # router уже содержит "/" и "/stats"
+from src.routes import router           
 from src.logger import logger
 from datetime import datetime
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-from src.database import get_cursor
-from src.routes import router as base_router  # Импортируем основной роутер (с `/stats` и другими общими эндпоинтами)
-from src.routes import create_service_router  # Импортируем фабрику роутеров (её добавим в routes.py)
+from src.dbase import get_cursor
+from src.routes import router as base_router  
+from src.routes import create_service_router  
 
 app = FastAPI()
 
@@ -41,7 +41,6 @@ for service_name in get_active_services():
     service_router = create_service_router(service_name)  # Создаём роутер
     app.include_router(service_router)  # Регистрируем его в приложении
 
-# --- 3. Подключаем основной роутер (со статическими эндпоинтами, например, `/stats`) ---
 app.include_router(base_router)
 
 

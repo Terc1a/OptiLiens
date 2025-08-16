@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request
-from src.database import get_cursor
+from src.dbase import get_cursor
 from src.logger import logger
 import uuid
 from datetime import datetime, timedelta
@@ -8,7 +8,7 @@ import mysql.connector
 import json
 from decimal import Decimal
 from fastapi.responses import JSONResponse
-from database import fetch_for_table
+from src.dbase import fetch_for_table
 router = APIRouter()
 
 # ---------- конфиг ----------
@@ -329,14 +329,48 @@ def create_service_router(service_name: str) -> APIRouter:
 
 
 @router.post("/register_service")
-async def register_service(service_name: str):
+async def register_service(service_name: str, service_domain: str):
     # Проверка существования такого сервиса
+    try:
+        with get_cursor() as (cur, conn):
+            cur.execute(f"SELECT s_name FROM services WHERE s_name='{service_name}'")
+            if cur.fetchall(): 
+                return {"status": "service exist"}
+            
+            cur.execute(f"SELECT table_name FROM information_schema.tables WHERE table_name='{service_name}'")
+            if cur.fetchall():
+                return {"status": "service exist"}
+                
+    except Exception as e:
+        logger.error(f"Error checking service existence: {e}")
+        return {"status": "error", "message": str(e)}
+    
     # Создание таблицы сервиса
-    # Добавление в registered_services
-    # Тестирование(пингом или вроде того)
-    # Возврат успешного ответа + статуса
-    pass
+    try:
+        with get_cursor() as (cur, conn):
+            cur.execute(f"""
+                CREATE TABLE IF NOT EXISTS `{service_name}` (
+                    `addr` varchar(255) DEFAULT NULL,
+                    `name` varchar(255) DEFAULT NULL,
+                    `method` varchar(255) DEFAULT NULL,
+                    `timed` datetime DEFAULT NULL,
+                    `is_mobile` varchar(255) DEFAULT NULL,
+                    `user_agent` varchar(255) DEFAULT NULL,
+                    `direction` varchar(255) DEFAULT '/'
+                )
+            """)
+            # Добавление в registered_services
+            cur.execute("""
+                INSERT INTO services (s_name, s_domain, reg_date)
+                VALUES (%s, %s, %s)
+            """, (service_name, service_domain, datetime.now()))
+            conn.commit()
+            
+    except Exception as e:
+        logger.error(f"Error creating service: {e}")
+        return {"status": "error", "message": str(e)}
+    
+    return {"status": "ok"}
 
 #TODO
-#Админка + авторизация в ней
 # register_service(через админку)
