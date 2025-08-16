@@ -158,22 +158,21 @@ def add_service():
         # 2. Отправляем данные в FastAPI-аналитику
         api_url = "https://analyze.hikariplus.ru/register_service"
         payload = {
-            "name": request.form['name'],
-            "domain": request.form['domain'],
+            "service_name": request.form['name'],
+            "service_domain": request.form['domain'],
         }
-        
-        # Добавьте авторизационный токен, если нужно
-        #headers = {'Authorization': 'Bearer your-secret-token'}
-        #api_response = requests.post(api_url, json=payload, headers=headers)
-        api_response = requests.post(api_url, json=payload)
+        try:
+            api_response = requests.post(api_url, params=payload, timeout=5)
+        except requests.exceptions.RequestException as e:
+            return jsonify({"error": str(e)}), 502
+
         if api_response.status_code != 200:
-            return jsonify({"error": "API error"}), 500
+            return jsonify({"error": "API error", "status": api_response.status_code, "text": api_response.text}), 502
 
         return jsonify({"status": "success"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == "__main__":
     app.run(debug=True, host='192.168.0.5', port='5000')
