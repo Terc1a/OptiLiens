@@ -103,13 +103,16 @@ def login():
         password = request.form['inputPassword']
         cnx = connect(user=conf['user'], password=conf['password'], host=conf['host_db'], database=conf['database'])
         cursor = cnx.cursor(buffered=True)
-        select_user = f"""SELECT * FROM users WHERE user_name='{username}' and user_password='{password}'"""
-        cursor.execute(select_user)
-        user_data = cursor.fetchall()
-        user = User(user_data[0][0], user_data[0][1], user_data[0][1])
-        print(type(user))
+        select_user = "SELECT user_id, user_name, user_password FROM users WHERE user_name = %s LIMIT 1"
+        cursor.execute(select_user, (username,))
+        row = cursor.fetchone()
+        if row is None:
+            # Пользователь не найден
+            return render_template('signin.html', error="Неверные учетные данные")
+        user_id, user_name, user_password = row
+        user = User(user_id, user_name, user_password)
         login_user(user)
-        return redirect(url_for('dash'))
+        return redirect(url_for('admin'))
 
     return render_template('signin.html')
 
