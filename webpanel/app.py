@@ -116,6 +116,7 @@ def login():
         login_user(user)
         return redirect(url_for('admin_panel'))
 
+
     return render_template('signin.html')
 
 @app.route('/content-to-refresh')
