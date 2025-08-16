@@ -156,7 +156,7 @@ def add_service():
                 logo_path = f"/static/logos/{filename}"
 
         # 2. Отправляем данные в FastAPI-аналитику
-        api_url = "https://analytics.hikariplus.ru/register_service"
+        api_url = "https://analyze.hikariplus.ru/register_service"
         payload = {
             "name": request.form['name'],
             "domain": request.form['domain'],
