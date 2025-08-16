@@ -6,6 +6,8 @@ import yaml
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import uuid
+import requests
 
 with open("../config.yaml", "r") as f:
     conf = yaml.safe_load(f)
@@ -112,7 +114,7 @@ def login():
         user_id, user_name, user_password = row
         user = User(user_id, user_name, user_password)
         login_user(user)
-        return redirect(url_for('admin'))
+        return redirect(url_for('admin_panel'))
 
     return render_template('signin.html')
 
@@ -135,7 +137,7 @@ def refresher():
 
 @app.route('/admin')
 @login_required
-def dashboard():
+def admin_panel():
     return render_template('admin.html')
 
 
