@@ -85,20 +85,6 @@ def dash():
         return render_template('dash.html', rc=rc, uc=uc, ucounter=uc[:9], mc=mc, mcounter=mc[:9], test=test)
 
 @app.route('/api/signin',methods=['POST'])
-# def signIn():
-#     name = request.form['inputName']
-#     password = request.form['inputPassword']
-#     cnx = connect(user=conf['user'], password=conf['password'], host=conf['host_db'], database=conf['database'])
-#     cursor = cnx.cursor(buffered=True)
-#     check_user = f"""select * from users where user_name='{name}' and user_password='{password}'"""
-#     cursor.execute(check_user)
-
-#     result = cursor.fetchall()
-#     if result:
-#         return redirect(url_for('dash'))
-#     else:
-#         return json.dumps({'html':'<span>Username or Password is incorrect</span>'})
-#     cnx.close()
 def login():
     if request.method == 'POST':
         username = request.form['inputName']

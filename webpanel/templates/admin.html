@@ -120,6 +120,24 @@
             margin-top: 10px;
             display: none;
         }
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #bbb; /* unknown */
+        }
+        .status-up { background-color: #2ecc71; }
+        .status-down { background-color: #e74c3c; }
+        .controls {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        table { width: 100%; border-collapse: collapse; background: #fff; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #fafafa; color: #34495e; }
     </style>
 </head>
 <body>
@@ -136,9 +154,37 @@
             <h1>Services Management</h1>
             <button class="add-service-btn" id="addServiceBtn">Add Service</button>
             
-            <!-- Здесь будет список существующих сервисов -->
+            <div class="controls">
+                <label>
+                    API base URL:
+                    <input type="text" id="apiBaseUrl" placeholder="https://analyze.hikariplus.ru" style="width:320px;">
+                </label>
+                <label>
+                    Scheme:
+                    <select id="pollScheme">
+                        <option value="https" selected>https</option>
+                        <option value="http">http</option>
+                    </select>
+                </label>
+                <label>
+                    Poll interval (sec):
+                    <input type="number" id="pollInterval" min="5" step="5" value="30" style="width:80px;">
+                </label>
+                <button class="btn btn-secondary" id="applySettings">Apply</button>
+            </div>
+
             <div id="servicesList">
-                <!-- Динамически будет заполняться через JS -->
+                <table id="servicesTable">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Name</th>
+                            <th>Domain</th>
+                            <th>Registered</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -173,6 +219,87 @@
     </div>
 
 <script>
+    // --- Settings helpers ---
+    function loadSettings() {
+        const savedBase = localStorage.getItem('apiBaseUrl');
+        const savedInterval = localStorage.getItem('pollIntervalSec');
+        const savedScheme = localStorage.getItem('pollScheme');
+        if (savedBase) document.getElementById('apiBaseUrl').value = savedBase;
+        if (savedInterval) document.getElementById('pollInterval').value = savedInterval;
+        if (savedScheme) document.getElementById('pollScheme').value = savedScheme;
+        if (!document.getElementById('apiBaseUrl').value) {
+            document.getElementById('apiBaseUrl').value = 'https://analyze.hikariplus.ru';
+        }
+    }
+    function saveSettings() {
+        localStorage.setItem('apiBaseUrl', document.getElementById('apiBaseUrl').value.trim());
+        localStorage.setItem('pollIntervalSec', document.getElementById('pollInterval').value);
+        localStorage.setItem('pollScheme', document.getElementById('pollScheme').value);
+    }
+
+    let pollTimer = null;
+    function startPolling() {
+        if (pollTimer) clearInterval(pollTimer);
+        const intervalSec = Math.max(5, parseInt(document.getElementById('pollInterval').value || '30', 10));
+        pollTimer = setInterval(fetchStatuses, intervalSec * 1000);
+        fetchStatuses();
+    }
+
+    // --- Render services table ---
+    async function loadServices() {
+        const base = document.getElementById('apiBaseUrl').value.replace(/\/$/, '');
+        try {
+            const resp = await fetch(`${base}/services`);
+            if (!resp.ok) throw new Error('Failed to load services');
+            const data = await resp.json();
+            const tbody = document.querySelector('#servicesTable tbody');
+            tbody.innerHTML = '';
+            (data.services || []).forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="status-dot" id="st-${encodeURIComponent(s.name)}"></span></td>
+                    <td>${s.name}</td>
+                    <td>${s.domain || ''}</td>
+                    <td>${s.reg_date ? new Date(s.reg_date).toLocaleString() : ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function fetchStatuses() {
+        const base = document.getElementById('apiBaseUrl').value.replace(/\/$/, '');
+        const scheme = document.getElementById('pollScheme').value;
+        try {
+            const resp = await fetch(`${base}/services_status?scheme=${encodeURIComponent(scheme)}`);
+            if (!resp.ok) throw new Error('Failed to load statuses');
+            const data = await resp.json();
+            const statuses = data.statuses || {};
+            for (const [name, up] of Object.entries(statuses)) {
+                const el = document.getElementById(`st-${encodeURIComponent(name)}`);
+                if (!el) continue;
+                el.classList.remove('status-up', 'status-down');
+                el.classList.add(up ? 'status-up' : 'status-down');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // Settings apply
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSettings();
+        document.getElementById('applySettings').addEventListener('click', () => {
+            saveSettings();
+            loadServices();
+            startPolling();
+        });
+        // initial load
+        loadServices().then(startPolling);
+    });
+
     document.getElementById('addServiceBtn').addEventListener('click', () => {
         document.getElementById('addServiceModal').style.display = 'flex';
     });
