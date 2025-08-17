@@ -372,5 +372,10 @@ async def register_service(service_name: str, service_domain: str):
     
     return {"status": "ok"}
 
-#TODO
-# register_service(через админку)
+
+@router.get("/services")
+async def get_services():
+    with get_cursor() as (cur, _):
+        cur.execute("SELECT s_name, s_domain, reg_date FROM services")
+        rows = cur.fetchall()
+    return {"services": rows}
