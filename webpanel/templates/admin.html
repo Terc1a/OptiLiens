@@ -210,7 +210,7 @@
 
 <script>
   /* ------------------------------------------------------------------ */
-  /*  1. Утилиты – настройки / опрос (оставляем как есть)             */
+  /* 1. Утилиты – настройки / опрос (оставляем как есть)             */
   /* ------------------------------------------------------------------ */
 
   function loadSettings() {
@@ -218,19 +218,22 @@
     if (saved) document.getElementById('pollInterval').value = saved;
   }
   function saveSettings() {
-    localStorage.setItem('pollIntervalSec', document.getElementById('pollInterval').value);
+    localStorage.setItem(
+      'pollIntervalSec',
+      document.getElementById('pollInterval').value
+    );
   }
 
   let pollTimer = null;
   function startPolling() {
     clearInterval(pollTimer);
-    const sec = Math.max(5, parseInt(document.getElementById('pollInterval').value || '30',10));
+    const sec = Math.max(5, parseInt(document.getElementById('pollInterval').value || '30', 10));
     pollTimer = setInterval(fetchStatuses, sec * 1000);
     fetchStatuses();
   }
 
   /* ------------------------------------------------------------------ */
-  /*  2. Загрузка таблицы сервисов и статусов                          */
+  /* 2. Загрузка таблицы сервисов и статусов                          */
   /* ------------------------------------------------------------------ */
 
   async function loadServices() {
@@ -241,20 +244,23 @@
       const data = await resp.json();
       const tbody = document.querySelector('#servicesTable tbody');
       tbody.innerHTML = '';
-      (data.services || []).forEach(s => {
+      (data.services || []).forEach((s) => {
         let name, domain, reg_date;
         if (Array.isArray(s)) [name, domain, reg_date] = s;
-        else if (s && typeof s === 'object') ({name, domain, reg_date} = s);
+        else if (s && typeof s === 'object') ({ name, domain, reg_date } = s);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><span class="status-dot" id="st-${encodeURIComponent(name||'')}"></span></td>
-          <td>${name||''}</td>
-          <td>${domain||''}</td>
-          <td>${reg_date?new Date(reg_date).toLocaleString():'</td>`;
+          <td><span class="status-dot" id="st-${encodeURIComponent(name || '')}"></span></td>
+          <td>${name || ''}</td>
+          <td>${domain || ''}</td>
+          <td>${reg_date ? new Date(reg_date).toLocaleString() : ''}</td>
+        `;
         tbody.appendChild(tr);
       });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   async function fetchStatuses() {
@@ -263,64 +269,66 @@
       const resp = await fetch(`${base}/services_status`);
       if (!resp.ok) throw new Error('Failed to load statuses');
       const data = await resp.json();
-      Object.entries(data.statuses||{}).forEach(([name, up]) => {
+      Object.entries(data.statuses || {}).forEach(([name, up]) => {
         const el = document.getElementById(`st-${encodeURIComponent(name)}`);
         if (!el) return;
         el.classList.toggle('status-up', !!up);
         el.classList.toggle('status-down', !up);
       });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   /* ------------------------------------------------------------------ */
-  /*  3. Инициализация при загрузке страницы                           */
+  /* 3. Инициализация при загрузке страницы                           */
   /* ------------------------------------------------------------------ */
 
   document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     document.getElementById('applySettings').addEventListener('click', () => {
-      saveSettings(); loadServices(); startPolling();
+      saveSettings();
+      loadServices();
+      startPolling();
     });
     loadServices().then(startPolling);
   });
 
   /* ------------------------------------------------------------------ */
-  /*  4. Работа с модальным окном                                      */
+  /* 4. Работа с модальным окном                                      */
   /* ------------------------------------------------------------------ */
 
-  const modalBody = document.querySelector('#addServiceModal .modal-body');
+  const modalBody = document.querySelector('#addServiceModal .modal-content');
 
   document.getElementById('addServiceBtn').onclick = () =>
-    document.getElementById('addServiceModal').style.display = 'flex';
+    (document.getElementById('addServiceModal').style.display = 'flex');
 
   document.getElementById('cancelBtn').onclick = () =>
-    document.getElementById('addServiceModal').style.display = 'none';
+    (document.getElementById('addServiceModal').style.display = 'none');
 
   /* ------------------------------------------------------------------ */
-  /*  5. Предпросмотр логотипа                                         */
+  /* 5. Предпросмотр логотипа                                         */
   /* ------------------------------------------------------------------ */
 
-  document.getElementById('serviceLogo').addEventListener('change', e => {
+  document.getElementById('serviceLogo').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = (ev) => {
       const img = document.getElementById('logoPreview');
-      img.src = ev.target.result; img.style.display = 'block';
+      img.src = ev.target.result;
+      img.style.display = 'block';
     };
     reader.readAsDataURL(file);
   });
 
   /* ------------------------------------------------------------------ */
-  /*  6. Добавление сервиса – основная часть (обновлённый блок)          */
+  /* 6. Добавление сервиса – основная часть (обновлённый блок)          */
   /* ------------------------------------------------------------------ */
 
-  document.getElementById('serviceForm').addEventListener('submit', async function(e) {
+  document.getElementById('serviceForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
-    // --------------------------------------------------------------
-    // Валидация обязательных полей перед отправкой
-    // --------------------------------------------------------------
     const name = this.elements['serviceName'].value.trim();
     const domain = this.elements['serviceDomain'].value.trim();
     const logoFile = this.elements['serviceLogo'].files[0];
@@ -329,11 +337,7 @@
       alert('Пожалуйста, заполните имя и домен сервиса.');
       return;
     }
-    // Логотип может быть необязательным – при необходимости добавьте проверку
 
-    // --------------------------------------------------------------
-    // Формируем FormData (browser‑передача multipart/form-data)
-    // --------------------------------------------------------------
     const formData = new FormData();
     formData.append('name', name);
     formData.append('domain', domain);
@@ -342,10 +346,9 @@
     try {
       const response = await fetch('/admin/add_service', {
         method: 'POST',
-        body: formData          // <‑ здесь браузер сам ставит правильный Content-Type
+        body: formData,
       });
 
-      // Если сервер отвечает 200/201 – всё ок, иначе считаем ошибкой
       if (!response.ok) {
         const errText = await response.text();
         throw new Error(errText || `HTTP ${response.status}`);
@@ -353,11 +356,8 @@
 
       const data = await response.json();
 
-      // ------------------------------------------------------------
-      // Обработка ответа от сервера
-      // ------------------------------------------------------------
       if (data.status === 'success') {
-        modalBody.innerHTML = '';                    // очищаем предыдущий контент
+        modalBody.innerHTML = ''; // очищаем предыдущий контент
         const link = document.createElement('a');
         link.href = data.download_url;
         link.textContent = 'Скачать конфиг';
