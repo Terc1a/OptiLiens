@@ -247,10 +247,7 @@
 
     // --- Render services table ---
     async function loadServices() {
-        const base = document.getElementById('apiBaseUrl').value
-            .trim()
-            .replace(/\/$/, '')
-            .replace(/^http:/, 'https:');
+        const base = 'https://analyze.hikariplus.ru';
         try {
             const resp = await fetch(`${base}/services`);
             if (!resp.ok) throw new Error('Failed to load services');
@@ -279,11 +276,8 @@
     }
 
     async function fetchStatuses() {
-        const base = document.getElementById('apiBaseUrl').value
-            .trim()
-            .replace(/\/$/, '')
-            .replace(/^http:/, 'https:');
-        const scheme = document.getElementById('pollScheme').value;
+        const base = 'https://analyze.hikariplus.ru';
+        const scheme = 'https';
         try {
             const resp = await fetch(`${base}/services_status?scheme=${encodeURIComponent(scheme)}`);
             if (!resp.ok) throw new Error('Failed to load statuses');
