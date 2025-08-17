@@ -12,7 +12,9 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # или ["http://192.168.0.4"] если хотите точнее
+    allow_origins=[
+        "https://manage.hikariplus.ru",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
