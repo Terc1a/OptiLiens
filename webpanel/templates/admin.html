@@ -362,6 +362,12 @@
         link.href = data.download_url;
         link.textContent = 'Скачать конфиг';
         link.style.display = 'block';
+
+        /* закрываем модальное окно после клика по ссылке */
+        link.addEventListener('click', () => {
+          document.getElementById('addServiceModal').style.display = 'none';
+        });
+
         modalBody.appendChild(link);
       } else {
         alert(data.error || 'Неизвестная ошибка при добавлении сервиса.');
