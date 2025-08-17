@@ -1,0 +1,198 @@
+# Changelog — v0.1.0 (initial snapshot)
+
+Дата: 2025-08-18
+
+Это зафиксированное текущее состояние проекта в репозитории `analytics`. Ниже перечислено, что есть, что работает, известные зависимости, внешние требования и открытые вопросы/недочеты.
+
+# Обзор структуры
+
+- __Бэкенд аналитики (FastAPI)__:
+  - Точка входа: `main2.py`
+  - Роуты и логика: `src/routes.py`
+  - Доступ к БД и агрегации: `src/dbase.py`
+  - Логирование: `src/logger.py`, конфиг `log_conf.yaml`
+- __Админ‑панель (Flask)__:
+  - Приложение: `webpanel/app.py`
+  - Шаблоны: `webpanel/templates/` (`index.html`, `signin.html`, `dash.html`, `admin.html`, `nginx.conf.j2`)
+  - Статика: `webpanel/static/` (`dash.css`, `signin.css`, `downloads/`)
+- __Конфигурации и прочее__:
+  - Зависимости: `requirements.txt`
+  - БД‑конфиг: `config.yaml` (в .gitignore; не прочитали содержимое)
+  - Подключение (альт.): `conn.py` (отдельный модуль подключения MySQL)
+  - Плейсхолдеры: `Changelog` (пустой), `README.md` (не соответствует текущему коду)
+
+# Что работает (по коду)
+
+- __FastAPI сервис аналитики__ (`main2.py`)
+  - Создаётся `FastAPI()` с CORS для `*`.
+  - HTTP middleware логирует все запросы (`logger` из `src/logger.py`).
+  - Динамическая регистрация роутеров по списку таблиц в БД:
+    - `get_active_services()` читает `SHOW TABLES` и исключает `users`.
+    - Для каждой таблицы создаётся роутер `/{service_name}/{path:path}` через `create_service_router()` из `src/routes.py`:
+      - Логирует хиты: IP (c учётом `x-forwarded-for`/`x-real-ip`), `direction` (путь), `method`, `timed`, `is_mobile`, `user_agent`.
+  - Включён базовый роутер `src/routes.py` c дополнительными эндпоинтами (см. ниже).
+  - Запуск: `uvicorn.run(... host="192.168.0.5", port=5556)`.
+
+- __Роуты аналитики__ (`src/routes.py`)
+  - Загрузка конфигурации MySQL из `config.yaml`.
+  - Фиксированные трекеры для конкретных сервисов:
+    - `GET /home/{path:path}` → пишет в таблицу `hikariplus`.
+    - `GET /wishes/{path:path}` → в `wishes`.
+    - `GET /manage/{path:path}` → в `manage`.
+    - `GET /blog/{path:path}` → в `blog`.
+    - `GET /todo/{path:path}` → в `todo`.
+  - `GET /stats` — возвращает счётчики по 5 таблицам (count(*)).
+  - `GET /pub_dash` — агрегированный JSON:
+    - `services[tbl]` — метрики из `fetch_for_table(tbl)` для каждой таблицы из `TABLES = ['blog','hikariplus','manage','todo','wishes']`.
+    - `global` — суммарные метрики, включая уникальные IP за последние 24ч через объединение таблиц.
+  - `POST /register_service` — регистрация нового сервиса:
+    - Проверяет уникальность `service_name` в таблице `services` и отсутствии таблицы с таким именем.
+    - Создаёт таблицу сервиса с колонками (`addr`, `name`, `method`, `timed`, `is_mobile`, `user_agent`, `direction`).
+    - Вставляет запись в `services(s_name, s_domain, reg_date)`.
+  - `GET /services` — список зарегистрированных сервисов (имя, домен, дата).
+  - `GET /services_status` — проверка доступности сервисов через HTTP(S):
+    - Асинхронно опрашивает `https://{domain}` (httpx, follow_redirects=True, timeout=10).
+    - Возвращает словарь `{service_name: is_up}`.
+
+- __Слой доступа к БД__ (`src/dbase.py`)
+  - Пул соединений `mysql.connector.pooling.MySQLConnectionPool`.
+  - Контекстный менеджер `get_cursor()` с commit/rollback.
+  - `fetch_for_table(tbl)` — агрегирует метрики:
+    - total_hits
+    - unique_ips_24h
+    - recent_rows (маскирует IP до вида `a.b.c.xxx`, сокращает UA)
+    - hits_series (по дням)
+    - unique_addr_series (по часам за 24ч)
+    - mobile_share_series (доля мобильных по дням)
+    - top_methods, top_endpoints (на самом деле оба по `direction`)
+    - ua_breakdown (Chrome/Firefox/Safari/Other по regexp)
+
+- __Логирование__ (`src/logger.py`, `log_conf.yaml`)
+  - Читает YAML конфиг и настраивает `logging.config.dictConfig`.
+  - Логгер `"hikariplus"` используется в FastAPI.
+
+- __Админ‑панель (Flask)__ (`webpanel/app.py`, `webpanel/templates/admin.html`)
+  - Flask конфигурируется `SECRET_KEY` и папками загрузок/скачиваний.
+  - Авторизация через `Flask-Login`:
+    - Загрузка пользователя из таблицы `users` по `user_id`.
+    - Вход в систему (`/api/signin`) по username/password: находит пользователя по имени, пароли в коде напрямую не проверяются через hash (см. раздел “Недочёты”).
+    - `@login_required` защищает `/admin`.
+  - Страницы:
+    - `/` → `index.html`
+    - `/signin` → `signin.html`
+    - `/dash` — запросы к БД `hikariplus`, топ-10 активных адресов, отдаёт `dash.html`.
+    - `/content-to-refresh` — JSON с быстрыми счётчиками для AJAX обновления.
+    - `/admin` — `admin.html` со списком сервисов и статусов.
+  - Маршрут `POST /admin/add_service`:
+    - Принимает форму (name, domain, logo).
+    - Лого сохраняется в `static/logos/{uuid}.{ext}`.
+    - Делает POST в FastAPI сервис на `https://analyze.hikariplus.ru/register_service` (через `requests`).
+    - Генерирует nginx конфиг из `templates/nginx.conf.j2`, сохраняет в `static/downloads/{service}.conf`, возвращает ссылку на скачивание (`/download/...`).
+  - Клиентская логика (`admin.html`):
+    - Грузит список сервисов: `GET https://analyze.hikariplus.ru/services`.
+    - Переодически опрашивает статусы: `GET https://analyze.hikariplus.ru/services_status` (интервал настраивается в UI).
+    - После добавления сервиса выдаёт ссылку для скачивания сгенерированного `.conf`.
+
+# Зависимости
+
+- См. `requirements.txt`. Ключевые:
+  - FastAPI, Starlette, Uvicorn
+  - Flask, Flask-Login, Flask-MySQL, Flask-WTF
+  - mysql-connector-python, PyMySQL
+  - PyYAML, requests
+- В коде используется `httpx` в `src/routes.py`, но __httpx нет в `requirements.txt`__ — требуется добавить.
+
+# Внешние требования и окружение
+
+- __База данных__: MySQL/MariaDB. Таблицы, от которых зависит код:
+  - `hikariplus`, `wishes`, `manage`, `blog`, `todo` — логи хитов.
+  - `services(s_name, s_domain, reg_date)` — реестр сервисов.
+  - `users(user_id, user_name, user_password, ...)` — логины для админки.
+  - Скриптов миграций/DDL в репозитории нет; создание базовых таблиц (кроме динамической части в `register_service`) — на стороне оператора.
+- __Конфиг__: `config.yaml` (в .gitignore):
+  - FastAPI/Flask читают его для MySQL и `SECRET_KEY`.
+  - Путь чтения: FastAPI — `./config.yaml` (корень репо), Flask — `../config.yaml` (относительно `webpanel/`).
+- __Сеть/порты__:
+  - FastAPI: `192.168.0.5:5556` (локально)
+  - Flask: `192.168.0.5:5000` (локально)
+  - Админ‑панель обращается к боевому API `https://analyze.hikariplus.ru` для `services`, `services_status`, `register_service`. Для локальной разработки/стенда нужно менять URL или проксировать.
+
+# Несоответствия и недочёты
+
+- __Отсутствует httpx в requirements__: импорт есть в `src/routes.py`, пакет не задекларирован.
+- __README.md — не соответствует проекту__:
+  - Описывает PostgreSQL, Docker и произвольные эндпоинты, которых в коде нет.
+  - Инструкции запуска и структуры не релевантны текущей кодовой базе.
+- __Безопасность входа (Flask)__:
+  - `login()` вытаскивает `user_password`, но не проверяет хэш/пароль через `check_password_hash`.
+  - В `load_user()` возвращается `User(..., password=user_data[0][1])` — вероятная ошибка индексации и хранения.
+- __SQL‑инъекции (потенциал)__:
+  - В `register_service()` есть прямые f-строки с подстановкой в SQL (например, `SELECT ... WHERE table_name='{service_name}'`). Нужно параметризовать.
+- __Схема БД не поставляется__:
+  - Нет SQL миграций/ddl для таблиц `hikariplus`, `wishes`, `manage`, `blog`, `todo`, `services`, `users`.
+- __Файл конфигурации__:
+  - `config.yaml` исключён из репозитория; нет `.example` файла с описанием ключей (`user`, `password`, `host_db`, `database`, `SECRET_KEY`).
+- __Жёстко заданные адреса/порты__:
+  - `192.168.0.5` в `main2.py` и `webpanel/app.py` — лучше вынести в конфиг/переменные окружения.
+- __Дублирование/переизбыток зависимостей__:
+  - Есть и `mysql-connector-python`, и `PyMySQL`, и `Flask-MySQL` — проверить реальную потребность.
+- __Ошибки в метриках именований__:
+  - `top_methods` и `top_endpoints` обе агрегируют `direction`; возможно, одно из полей должно агрегировать `method`.
+- __Пути к шаблонам Jinja__:
+  - В `webpanel/app.py` создаётся `Environment(FileSystemLoader('templates'))` и параллельно используется `render_template` Flask (который сам ищет в `webpanel/templates/`). Это работает, но двойная конфигурация может путать, особенно при смене рабочей директории.
+
+# Что отсутствует/в планах
+
+- __Миграции БД__/DDL файлы для всех таблиц.
+- __Docker/Compose__ (упомянуты в README, но отсутствуют).
+- __Конфиг‑шаблон__: `config.example.yaml` с инструкциями.
+- __Единый конфиг URL API__ для админки (переключение между локальным и прод).
+- __Тесты__ (юнит/интеграционные).
+- __Документация API__ (актуальная, со схемами ответа `pub_dash`, `services_status`, т.д.).
+- __CI/CD__ и линт/форматирование.
+- __Безопасность__:
+  - Пароли пользователей — хэширование и проверка через `werkzeug.security`.
+  - Параметризованные запросы везде (убрать f-строки в SQL).
+  - Ограничение CORS (сейчас `*`).
+
+# Как запускать (локально, по текущему коду)
+
+- __Предпосылки__:
+  - MySQL доступен, созданы таблицы, `config.yaml` корректно заполнен.
+  - Установлены зависимости: `pip install -r requirements.txt` + ДОБАВИТЬ `httpx`.
+- __FastAPI__:
+  - `python main2.py` (поднимет на `192.168.0.5:5556`)
+- __Flask админ‑панель__:
+  - `python webpanel/app.py` (поднимет на `192.168.0.5:5000`)
+  - В текущей версии админка ходит на `https://analyze.hikariplus.ru` — для локалки указать свой локальный URL (например, через переменную окружения/конфиг или временно заменить строку в `admin.html`/`app.py`).
+
+# Риски и известные проблемы
+
+- __Отсутствующий пакет httpx__ приведёт к падению `/services_status`.
+- __Несоответствие README__ может запутать при деплое.
+- __Пароли без хеш‑проверки__ — критично для прод.
+- __Жёсткие IP/порты__ — неудобно для переносимости.
+- __Нет схем БД__ — сложно разворачивать окружение с нуля.
+
+# Рекомендации к следующему релизу
+
+- __Добавить httpx в `requirements.txt`__.
+- __Внести правки безопасности в авторизацию__:
+  - Хранить пароли в виде хешей, проверять `check_password_hash`.
+  - Исправить индексацию в `load_user()`.
+- __Параметризовать все SQL__ в `src/routes.py`.
+- __Подготовить `config.example.yaml` и описать поля__.
+- __Вынести адреса/порты и API‑базу в конфиг/ENV__.
+- __Добавить миграции__ (Alembic/скрипты SQL).
+- __Обновить README.md__ под реальную архитектуру.
+- __Починить `top_methods` vs `top_endpoints`__ (одно из них агрегировать `method`).
+
+# Файлы-источники
+
+- FastAPI: `main2.py`, `src/routes.py`, `src/dbase.py`, `src/logger.py`, `log_conf.yaml`
+- Flask: `webpanel/app.py`, `webpanel/templates/admin.html` (+ другие шаблоны), `webpanel/static/*`
+- Конфиги/прочее: `requirements.txt`, `config.yaml` (локальный, игнорируется), `README.md`, `conn.py`
+
+— Конец первой фиксации состояния проекта.
+
+Статус: базовый сбор логов и агрегации по MySQL реализован и интегрирован с админ‑панелью; прод/локал конфигурация и безопасность требуют доработки; миграции и документация отсутствуют.
