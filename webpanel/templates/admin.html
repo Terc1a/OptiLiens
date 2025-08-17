@@ -155,17 +155,7 @@
             <button class="add-service-btn" id="addServiceBtn">Add Service</button>
             
             <div class="controls">
-                <label>
-                    API base URL:
-                    <input type="text" id="apiBaseUrl" placeholder="https://analyze.hikariplus.ru" style="width:320px;">
-                </label>
-                <label>
-                    Scheme:
-                    <select id="pollScheme">
-                        <option value="https" selected>https</option>
-                        <option value="http">http</option>
-                    </select>
-                </label>
+                <!-- API base URL and Scheme controls removed: using hardcoded HTTPS API endpoint -->
                 <label>
                     Poll interval (sec):
                     <input type="number" id="pollInterval" min="5" step="5" value="30" style="width:80px;">
@@ -221,20 +211,11 @@
 <script>
     // --- Settings helpers ---
     function loadSettings() {
-        const savedBase = localStorage.getItem('apiBaseUrl');
         const savedInterval = localStorage.getItem('pollIntervalSec');
-        const savedScheme = localStorage.getItem('pollScheme');
-        if (savedBase) document.getElementById('apiBaseUrl').value = savedBase;
         if (savedInterval) document.getElementById('pollInterval').value = savedInterval;
-        if (savedScheme) document.getElementById('pollScheme').value = savedScheme;
-        if (!document.getElementById('apiBaseUrl').value) {
-            document.getElementById('apiBaseUrl').value = 'https://analyze.hikariplus.ru';
-        }
     }
     function saveSettings() {
-        localStorage.setItem('apiBaseUrl', document.getElementById('apiBaseUrl').value.trim());
         localStorage.setItem('pollIntervalSec', document.getElementById('pollInterval').value);
-        localStorage.setItem('pollScheme', document.getElementById('pollScheme').value);
     }
 
     let pollTimer = null;
