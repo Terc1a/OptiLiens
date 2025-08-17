@@ -8,6 +8,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import uuid
 import requests
+from flask import current_app as ca
+from jinja2 import Environment, FileSystemLoader
+from flask import send_from_directory, abort
+
+# Загружаем Jinja‑среду один раз при старте приложения
+env = Environment(loader=FileSystemLoader('templates'))
 
 with open("../config.yaml", "r") as f:
     conf = yaml.safe_load(f)
@@ -15,7 +21,8 @@ with open("../config.yaml", "r") as f:
 app = Flask(__name__)
 app.config['SECRET_KEY'] = conf['SECRET_KEY']
 app.config['UPLOAD_FOLDER'] = 'static/logos'
-
+app.config['DOWNLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'downloads')
+os.makedirs(app.config['DOWNLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 login_manager = LoginManager()
@@ -155,10 +162,39 @@ def add_service():
         if api_response.status_code != 200:
             return jsonify({"error": "API error", "status": api_response.status_code, "text": api_response.text}), 502
 
-        return jsonify({"status": "success"}), 200
+        # 3. Генерируем nginx‑конфиг
+        tmpl = env.get_template('nginx.conf.j2')
+        conf_content = tmpl.render(
+            domain=request.form['domain'],
+            service=request.form['name'] 
+        )
+
+        # 4. Сохраняем файл во временную папку
+        filename = f"{request.form['name']}.conf"
+        file_path = os.path.join(ca.config['DOWNLOAD_FOLDER'], filename)
+        with open(file_path, 'w') as f:
+            f.write(conf_content)
+
+        # 5. Отправляем клиенту ссылку на скачивание
+        download_url = url_for('download_conf', filename=filename, _external=True)
+
+        return jsonify({"status": "success", "download_url": download_url}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/download/<path:filename>')
+def download_conf(filename):
+    try:
+        return send_from_directory(
+            ca.config['DOWNLOAD_FOLDER'],
+            filename,
+            as_attachment=True   # заголовок Content-Disposition: attachment
+        )
+    except FileNotFoundError:
+        abort(404)
+
 
 if __name__ == "__main__":
     app.run(debug=True, host='192.168.0.5', port='5000')

@@ -209,132 +209,129 @@
     </div>
 
 <script>
-    // --- Settings helpers ---
-    function loadSettings() {
-        const savedInterval = localStorage.getItem('pollIntervalSec');
-        if (savedInterval) document.getElementById('pollInterval').value = savedInterval;
-    }
-    function saveSettings() {
-        localStorage.setItem('pollIntervalSec', document.getElementById('pollInterval').value);
-    }
+  // --- Settings helpers ---
+  function loadSettings() {
+    const savedInterval = localStorage.getItem('pollIntervalSec');
+    if (savedInterval) document.getElementById('pollInterval').value = savedInterval;
+  }
+  function saveSettings() {
+    localStorage.setItem('pollIntervalSec', document.getElementById('pollInterval').value);
+  }
+  let pollTimer = null;
+  function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    const intervalSec = Math.max(5, parseInt(document.getElementById('pollInterval').value || '30', 10));
+    pollTimer = setInterval(fetchStatuses, intervalSec * 1000);
+    fetchStatuses();
+  }
 
-    let pollTimer = null;
-    function startPolling() {
-        if (pollTimer) clearInterval(pollTimer);
-        const intervalSec = Math.max(5, parseInt(document.getElementById('pollInterval').value || '30', 10));
-        pollTimer = setInterval(fetchStatuses, intervalSec * 1000);
-        fetchStatuses();
-    }
-
-    // --- Render services table ---
-    async function loadServices() {
-        const base = 'https://analyze.hikariplus.ru';
-        try {
-            const resp = await fetch(`${base}/services`);
-            if (!resp.ok) throw new Error('Failed to load services');
-            const data = await resp.json();
-            const tbody = document.querySelector('#servicesTable tbody');
-            tbody.innerHTML = '';
-            (data.services || []).forEach(s => {
-                let name, domain, reg_date;
-                if (Array.isArray(s)) {
-                    [name, domain, reg_date] = s;
-                } else if (s && typeof s === 'object') {
-                    ({ name, domain, reg_date } = s);
-                }
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><span class="status-dot" id="st-${encodeURIComponent(name || '')}"></span></td>
-                    <td>${name || ''}</td>
-                    <td>${domain || ''}</td>
-                    <td>${reg_date ? new Date(reg_date).toLocaleString() : ''}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        } catch (e) {
-            console.error(e);
+  // --- Render services table ---
+  async function loadServices() {
+    const base = 'https://analyze.hikariplus.ru';
+    try {
+      const resp = await fetch(`${base}/services`);
+      if (!resp.ok) throw new Error('Failed to load services');
+      const data = await resp.json();
+      const tbody = document.querySelector('#servicesTable tbody');
+      tbody.innerHTML = '';
+      (data.services || []).forEach(s => {
+        let name, domain, reg_date;
+        if (Array.isArray(s)) {
+          [name, domain, reg_date] = s;
+        } else if (s && typeof s === 'object') {
+          ({ name, domain, reg_date } = s);
         }
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="status-dot" id="st-${encodeURIComponent(name || '')}"></span></td>
+          <td>${name || ''}</td>
+          <td>${domain || ''}</td>
+          <td>${reg_date ? new Date(reg_date).toLocaleString() : ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      console.error(e);
     }
+  }
 
-    async function fetchStatuses() {
-        const base = 'https://analyze.hikariplus.ru';
-        const scheme = 'https';
-        try {
-            const resp = await fetch(`${base}/services_status`);
-            if (!resp.ok) throw new Error('Failed to load statuses');
-            const data = await resp.json();
-            const statuses = data.statuses || {};
-            for (const [name, up] of Object.entries(statuses)) {
-                const el = document.getElementById(`st-${encodeURIComponent(name)}`);
-                if (!el) continue;
-                el.classList.remove('status-up', 'status-down');
-                el.classList.add(up ? 'status-up' : 'status-down');
-            }
-        } catch (e) {
-            console.error(e);
-        }
+  async function fetchStatuses() {
+    const base = 'https://analyze.hikariplus.ru';
+    try {
+      const resp = await fetch(`${base}/services_status`);
+      if (!resp.ok) throw new Error('Failed to load statuses');
+      const data = await resp.json();
+      const statuses = data.statuses || {};
+      for (const [name, up] of Object.entries(statuses)) {
+        const el = document.getElementById(`st-${encodeURIComponent(name)}`);
+        if (!el) continue;
+        el.classList.remove('status-up', 'status-down');
+        el.classList.add(up ? 'status-up' : 'status-down');
+      }
+    } catch (e) {
+      console.error(e);
     }
+  }
 
-    // Settings apply
-    document.addEventListener('DOMContentLoaded', () => {
-        loadSettings();
-        document.getElementById('applySettings').addEventListener('click', () => {
-            saveSettings();
-            loadServices();
-            startPolling();
-        });
-        // initial load
-        loadServices().then(startPolling);
+  // Settings apply
+  document.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
+    document.getElementById('applySettings').addEventListener('click', () => {
+      saveSettings();
+      loadServices();
+      startPolling();
     });
+    // initial load
+    loadServices().then(startPolling);
+  });
 
-    document.getElementById('addServiceBtn').addEventListener('click', () => {
-        document.getElementById('addServiceModal').style.display = 'flex';
-    });
+  document.getElementById('addServiceBtn').addEventListener('click', () => {
+    document.getElementById('addServiceModal').style.display = 'flex';
+  });
+  document.getElementById('cancelBtn').addEventListener('click', () => {
+    document.getElementById('addServiceModal').style.display = 'none';
+  });
 
-    document.getElementById('cancelBtn').addEventListener('click', () => {
-        document.getElementById('addServiceModal').style.display = 'none';
-    });
+  // Превью логотипа
+  document.getElementById('serviceLogo').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        document.getElementById('logoPreview').src = event.target.result;
+        document.getElementById('logoPreview').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  });
 
-    // Превью логотипа
-    document.getElementById('serviceLogo').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                document.getElementById('logoPreview').src = event.target.result;
-                document.getElementById('logoPreview').style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // Отправка формы
-    document.getElementById('serviceForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData();
-        formData.append('name', document.getElementById('serviceName').value);
-        formData.append('domain', document.getElementById('serviceDomain').value);
-        formData.append('logo', document.getElementById('serviceLogo').files[0]);
-
-        try {
-            // 1. Отправляем в Flask-дашборд (он уже обработает лого и перешлёт в API)
-            const response = await fetch('/admin/add_service', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                alert('Сервис успешно добавлен!');
-                window.location.reload();
-            } else {
-                alert('Ошибка: ' + (await response.text()));
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Ошибка соединения');
-        }
-    });
+  // --- Add Service Form Submission ---
+  const modalBody = document.querySelector('#addServiceModal .modal-body');
+  document.getElementById('serviceForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = this;
+    try {
+      const response = await fetch('/admin/add_service', {
+        method: 'POST',
+        body: new FormData(form)
+      });
+      const data = await response.json();
+      if (data.status === 'success') {
+        // Показать модальное окно «Сервис создан» и ссылку для скачивания конфига
+        modalBody.innerHTML = ''; // очищаем предыдущий контент
+        const link = document.createElement('a');
+        link.href = data.download_url;
+        link.textContent = 'Скачать конфиг';
+        link.style.display = 'block';
+        modalBody.appendChild(link);
+      } else {
+        alert(data.error || 'Ошибка при добавлении сервиса');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Ошибка соединения');
+    }
+  });
 </script>
 </body>
 </html>
