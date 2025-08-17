@@ -9,6 +9,9 @@ import json
 from decimal import Decimal
 from fastapi.responses import JSONResponse
 from src.dbase import fetch_for_table
+import httpx
+import asyncio
+
 router = APIRouter()
 
 # ---------- конфиг ----------
@@ -379,3 +382,37 @@ async def get_services():
         cur.execute("SELECT s_name, s_domain, reg_date FROM services")
         rows = cur.fetchall()
     return {"services": rows}
+
+
+@router.get("/services_status")
+async def services_status():
+    statuses = {}
+    with get_cursor() as (cur, _):
+        # Выбираем только имя и домен
+        cur.execute("SELECT s_name, s_domain FROM services")
+        services = cur.fetchall()
+
+    async def check_service(name: str, domain: str):
+        """Асинхронно проверяет доступность одного сервиса."""
+        try:
+            # Используем httpx для асинхронных запросов
+            async with httpx.AsyncClient(follow_redirects=True) as client:
+                # Проверяем базовый URL, таймаут 10 секунд
+                response = await client.get(f"https://{domain}", timeout=10)
+                # Считаем сервис активным при любом успешном статусе (2xx)
+                return name, response.is_success
+        except httpx.RequestError:
+            # Если произошла любая ошибка сети/DNS, считаем сервис неактивным
+            return name, False
+
+    # Создаем задачи для параллельного выполнения
+    tasks = [check_service(name, domain) for name, domain in services]
+    # Запускаем все проверки одновременно и ждем результатов
+    results = await asyncio.gather(*tasks)
+
+    # Собираем результаты в словарь
+    for name, is_active in results:
+        statuses[name] = is_active
+
+    return {"statuses": statuses}
+    
