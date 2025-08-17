@@ -209,23 +209,30 @@
     </div>
 
 <script>
-  // --- Settings helpers ---
+  /* ------------------------------------------------------------------ */
+  /*  1. Утилиты – настройки / опрос (оставляем как есть)             */
+  /* ------------------------------------------------------------------ */
+
   function loadSettings() {
-    const savedInterval = localStorage.getItem('pollIntervalSec');
-    if (savedInterval) document.getElementById('pollInterval').value = savedInterval;
+    const saved = localStorage.getItem('pollIntervalSec');
+    if (saved) document.getElementById('pollInterval').value = saved;
   }
   function saveSettings() {
     localStorage.setItem('pollIntervalSec', document.getElementById('pollInterval').value);
   }
+
   let pollTimer = null;
   function startPolling() {
-    if (pollTimer) clearInterval(pollTimer);
-    const intervalSec = Math.max(5, parseInt(document.getElementById('pollInterval').value || '30', 10));
-    pollTimer = setInterval(fetchStatuses, intervalSec * 1000);
+    clearInterval(pollTimer);
+    const sec = Math.max(5, parseInt(document.getElementById('pollInterval').value || '30',10));
+    pollTimer = setInterval(fetchStatuses, sec * 1000);
     fetchStatuses();
   }
 
-  // --- Render services table ---
+  /* ------------------------------------------------------------------ */
+  /*  2. Загрузка таблицы сервисов и статусов                          */
+  /* ------------------------------------------------------------------ */
+
   async function loadServices() {
     const base = 'https://analyze.hikariplus.ru';
     try {
@@ -236,23 +243,18 @@
       tbody.innerHTML = '';
       (data.services || []).forEach(s => {
         let name, domain, reg_date;
-        if (Array.isArray(s)) {
-          [name, domain, reg_date] = s;
-        } else if (s && typeof s === 'object') {
-          ({ name, domain, reg_date } = s);
-        }
+        if (Array.isArray(s)) [name, domain, reg_date] = s;
+        else if (s && typeof s === 'object') ({name, domain, reg_date} = s);
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><span class="status-dot" id="st-${encodeURIComponent(name || '')}"></span></td>
-          <td>${name || ''}</td>
-          <td>${domain || ''}</td>
-          <td>${reg_date ? new Date(reg_date).toLocaleString() : ''}</td>
-        `;
+          <td><span class="status-dot" id="st-${encodeURIComponent(name||'')}"></span></td>
+          <td>${name||''}</td>
+          <td>${domain||''}</td>
+          <td>${reg_date?new Date(reg_date).toLocaleString():'</td>`;
         tbody.appendChild(tr);
       });
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   }
 
   async function fetchStatuses() {
@@ -261,75 +263,112 @@
       const resp = await fetch(`${base}/services_status`);
       if (!resp.ok) throw new Error('Failed to load statuses');
       const data = await resp.json();
-      const statuses = data.statuses || {};
-      for (const [name, up] of Object.entries(statuses)) {
+      Object.entries(data.statuses||{}).forEach(([name, up]) => {
         const el = document.getElementById(`st-${encodeURIComponent(name)}`);
-        if (!el) continue;
-        el.classList.remove('status-up', 'status-down');
-        el.classList.add(up ? 'status-up' : 'status-down');
-      }
-    } catch (e) {
-      console.error(e);
-    }
+        if (!el) return;
+        el.classList.toggle('status-up', !!up);
+        el.classList.toggle('status-down', !up);
+      });
+    } catch (e) { console.error(e); }
   }
 
-  // Settings apply
+  /* ------------------------------------------------------------------ */
+  /*  3. Инициализация при загрузке страницы                           */
+  /* ------------------------------------------------------------------ */
+
   document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     document.getElementById('applySettings').addEventListener('click', () => {
-      saveSettings();
-      loadServices();
-      startPolling();
+      saveSettings(); loadServices(); startPolling();
     });
-    // initial load
     loadServices().then(startPolling);
   });
 
-  document.getElementById('addServiceBtn').addEventListener('click', () => {
-    document.getElementById('addServiceModal').style.display = 'flex';
-  });
-  document.getElementById('cancelBtn').addEventListener('click', () => {
-    document.getElementById('addServiceModal').style.display = 'none';
-  });
+  /* ------------------------------------------------------------------ */
+  /*  4. Работа с модальным окном                                      */
+  /* ------------------------------------------------------------------ */
 
-  // Превью логотипа
-  document.getElementById('serviceLogo').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        document.getElementById('logoPreview').src = event.target.result;
-        document.getElementById('logoPreview').style.display = 'block';
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-
-  // --- Add Service Form Submission ---
   const modalBody = document.querySelector('#addServiceModal .modal-body');
+
+  document.getElementById('addServiceBtn').onclick = () =>
+    document.getElementById('addServiceModal').style.display = 'flex';
+
+  document.getElementById('cancelBtn').onclick = () =>
+    document.getElementById('addServiceModal').style.display = 'none';
+
+  /* ------------------------------------------------------------------ */
+  /*  5. Предпросмотр логотипа                                         */
+  /* ------------------------------------------------------------------ */
+
+  document.getElementById('serviceLogo').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = document.getElementById('logoPreview');
+      img.src = ev.target.result; img.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  /* ------------------------------------------------------------------ */
+  /*  6. Добавление сервиса – основная часть (обновлённый блок)          */
+  /* ------------------------------------------------------------------ */
+
   document.getElementById('serviceForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const form = this;
+
+    // --------------------------------------------------------------
+    // Валидация обязательных полей перед отправкой
+    // --------------------------------------------------------------
+    const name = this.elements['serviceName'].value.trim();
+    const domain = this.elements['serviceDomain'].value.trim();
+    const logoFile = this.elements['serviceLogo'].files[0];
+
+    if (!name || !domain) {
+      alert('Пожалуйста, заполните имя и домен сервиса.');
+      return;
+    }
+    // Логотип может быть необязательным – при необходимости добавьте проверку
+
+    // --------------------------------------------------------------
+    // Формируем FormData (browser‑передача multipart/form-data)
+    // --------------------------------------------------------------
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('domain', domain);
+    if (logoFile) formData.append('logo', logoFile);
+
     try {
       const response = await fetch('/admin/add_service', {
         method: 'POST',
-        body: new FormData(form)
+        body: formData          // <‑ здесь браузер сам ставит правильный Content-Type
       });
+
+      // Если сервер отвечает 200/201 – всё ок, иначе считаем ошибкой
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `HTTP ${response.status}`);
+      }
+
       const data = await response.json();
+
+      // ------------------------------------------------------------
+      // Обработка ответа от сервера
+      // ------------------------------------------------------------
       if (data.status === 'success') {
-        // Показать модальное окно «Сервис создан» и ссылку для скачивания конфига
-        modalBody.innerHTML = ''; // очищаем предыдущий контент
+        modalBody.innerHTML = '';                    // очищаем предыдущий контент
         const link = document.createElement('a');
         link.href = data.download_url;
         link.textContent = 'Скачать конфиг';
         link.style.display = 'block';
         modalBody.appendChild(link);
       } else {
-        alert(data.error || 'Ошибка при добавлении сервиса');
+        alert(data.error || 'Неизвестная ошибка при добавлении сервиса.');
       }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Ошибка соединения');
+    } catch (err) {
+      console.error('Ошибка при отправке:', err);
+      alert(`Ошибка: ${err.message}`);
     }
   });
 </script>
