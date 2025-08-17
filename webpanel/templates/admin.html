@@ -247,7 +247,10 @@
 
     // --- Render services table ---
     async function loadServices() {
-        const base = document.getElementById('apiBaseUrl').value.replace(/\/$/, '');
+        const base = document.getElementById('apiBaseUrl').value
+            .trim()
+            .replace(/\/$/, '')
+            .replace(/^http:/, 'https:');
         try {
             const resp = await fetch(`${base}/services`);
             if (!resp.ok) throw new Error('Failed to load services');
@@ -255,12 +258,18 @@
             const tbody = document.querySelector('#servicesTable tbody');
             tbody.innerHTML = '';
             (data.services || []).forEach(s => {
+                let name, domain, reg_date;
+                if (Array.isArray(s)) {
+                    [name, domain, reg_date] = s;
+                } else if (s && typeof s === 'object') {
+                    ({ name, domain, reg_date } = s);
+                }
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><span class="status-dot" id="st-${encodeURIComponent(s.name)}"></span></td>
-                    <td>${s.name}</td>
-                    <td>${s.domain || ''}</td>
-                    <td>${s.reg_date ? new Date(s.reg_date).toLocaleString() : ''}</td>
+                    <td><span class="status-dot" id="st-${encodeURIComponent(name || '')}"></span></td>
+                    <td>${name || ''}</td>
+                    <td>${domain || ''}</td>
+                    <td>${reg_date ? new Date(reg_date).toLocaleString() : ''}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -270,7 +279,10 @@
     }
 
     async function fetchStatuses() {
-        const base = document.getElementById('apiBaseUrl').value.replace(/\/$/, '');
+        const base = document.getElementById('apiBaseUrl').value
+            .trim()
+            .replace(/\/$/, '')
+            .replace(/^http:/, 'https:');
         const scheme = document.getElementById('pollScheme').value;
         try {
             const resp = await fetch(`${base}/services_status?scheme=${encodeURIComponent(scheme)}`);
