@@ -271,10 +271,10 @@ async def pub_dash():
 
     # Подсчет уникальных IP за 24 часа для всех сервисов
     unions = " UNION ALL ".join(
-        f"SELECT addr FROM `{t}` WHERE timed >= %s" for t in TABLES
+        f"SELECT addr FROM `{t}` WHERE timed >= %s and addr !='85.192.130.91'" for t in TABLES
     )
     cur.execute(
-        f"SELECT COUNT(DISTINCT addr) FROM ({unions}) AS u",
+        f"SELECT COUNT(DISTINCT addr) FROM ({unions}) AS u where addr !='85.192.130.91'",
         [now - timedelta(hours=24)] * len(TABLES)
     )
     global_unique = int(cur.fetchone()[0])
