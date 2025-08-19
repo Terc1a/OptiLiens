@@ -59,7 +59,7 @@ def fetch_for_table(tbl: str):
     unique_ips_24h = int(q(f"""
         SELECT COUNT(DISTINCT addr) AS c 
         FROM `{tbl}` 
-        WHERE timed >= NOW() - INTERVAL 24 HOUR
+        WHERE timed >= NOW() - INTERVAL 24 HOUR and addr !='85.192.130.91'
     """)[0]['c'])
     # 3. recent_rows
     recent_rows = q(f"""
@@ -73,7 +73,7 @@ def fetch_for_table(tbl: str):
             direction AS name,
             method, timed, is_mobile,
             CONCAT(LEFT(user_agent, 60), '...') AS user_agent
-        FROM `{tbl}`
+        FROM `{tbl}` where addr !='85.192.130.91'
         ORDER BY timed DESC
         LIMIT 20
     """)
