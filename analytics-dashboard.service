@@ -1,0 +1,21 @@
+[Unit]
+Description=Analytics Dashboard Service
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/home/tercia/analytics/webpanel
+
+# Прямой запуск через Python
+ExecStart=/home/tercia/analytics/venv/bin/python3 app.py
+
+# Перезапуск при ошибках                                                                                                                                                                                          Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+# Безопасность                                                                                                                                                                                                    # NoNewPrivileges=yes
+# PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
