@@ -104,8 +104,14 @@ def login():
         if row is None:
             # Пользователь не найден
             return render_template('signin.html', error="Неверные учетные данные")
-        user_id, user_name, user_password = row
-        user = User(user_id, user_name, user_password)
+        user_id, user_name, stored_hash = row
+
+        # Verify the password
+        if not check_password_hash(stored_hash, password):
+            return render_template('signin.html', error="Неверные учетные данные")
+
+        # Password is correct – log in the user
+        user = User(user_id, user_name, stored_hash)
         login_user(user)
         return redirect(url_for('admin_panel'))
 
