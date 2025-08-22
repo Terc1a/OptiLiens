@@ -27,7 +27,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login' # Redirect unauthenticated users to 'login' route
+login_manager.login_view = 'login'
 
 class User(UserMixin):
     def __init__(self, id, username, password):
@@ -84,11 +84,6 @@ def dash():
         print(test)
         cnx.close()
 
-
-#Вот тут надо отдавать топ-10 активных адресов и количество запросов у них
-#SELECT DISTINCT(addr), COUNT(*) AS req_count FROM hikariplus GROUP BY addr ORDER BY req_count DESC limit 10;
-
-
         return render_template('dash.html', rc=rc, uc=uc, ucounter=uc[:9], mc=mc, mcounter=mc[:9], test=test)
 
 @app.route('/api/signin',methods=['POST'])
@@ -132,6 +127,7 @@ def refresher():
         cursor.execute(mobile_req_count)
         mc = cursor.fetchall()
         cnx.close()
+
         return jsonify(success=True, rc=rc, uc=uc, ucounter=uc[:9], mc=mc, mcounter=mc[:9])
 
 
