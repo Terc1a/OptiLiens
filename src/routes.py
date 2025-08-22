@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request
-from src.dbase import get_cursor
+from src.dbase import get_cursor, transaction
 from src.logger import logger
 import uuid
 from datetime import datetime, timedelta
@@ -37,7 +37,6 @@ def json_serial(obj):
     if isinstance(obj, bytes):
         return obj.decode('utf-8', errors='ignore')
     raise TypeError
-
 
 
 @router.get("/home/{path:path}")            # mirroring для hikariplus.ru
@@ -237,24 +236,16 @@ async def stats():
         # уникальные адреса и количество
         cur.execute("SELECT COUNT(*) FROM hikariplus")
         home_count = cur.fetchall()
-
-
         # уникальные адреса и количество2
         cur.execute("SELECT COUNT(*) FROM wishes")
         wish_count = cur.fetchall()
-
-
         # уникальные адреса и количество3
         cur.execute("SELECT COUNT(*) FROM manage")
         manage_count = cur.fetchall()
-
-
-        # уникальные адреса и количество3
+        # уникальные адреса и количество4
         cur.execute("SELECT COUNT(*) FROM blog")
         blog_count = cur.fetchall()
-
-
-        # уникальные адреса и количество3
+        # уникальные адреса и количество5
         cur.execute("SELECT COUNT(*) FROM todo")
         todo_count = cur.fetchall()
 
@@ -314,7 +305,7 @@ def create_service_router(service_name: str) -> APIRouter:
         is_mobile = "iPhone" in ua or "Android" in ua
         original_path = request.headers.get("x-original-path", str(request.url.path))
 
-        with get_cursor() as (cur, _):
+        with transaction() as (cur, _):
             cur.execute(f"SELECT name FROM {service_name} WHERE addr=%s LIMIT 1", (client_ip,))
             row = cur.fetchone()
             name = row[0] if row else str(uuid.uuid4())
@@ -350,7 +341,7 @@ async def register_service(service_name: str, service_domain: str):
     
     # Создание таблицы сервиса
     try:
-        with get_cursor() as (cur, conn):
+        with transaction() as (cur, conn):
             cur.execute(f"""
                 CREATE TABLE IF NOT EXISTS `{service_name}` (
                     `addr` varchar(255) DEFAULT NULL,

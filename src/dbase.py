@@ -3,6 +3,7 @@ from mysql.connector import pooling
 import yaml
 from contextlib import contextmanager
 from datetime import datetime, timedelta
+from src.logger import logger
 
 # Читаем конфигурацию один раз
 with open("config.yaml", "r") as f:
@@ -40,6 +41,22 @@ def get_cursor():
         cur.close()
         conn.close()
 
+
+@contextmanager
+def transaction():
+    """Контекстный менеджер для транзакций."""
+    conn = pool.get_connection()          # ваш существующий способ получить соединение
+    cur = conn.cursor()
+    try:
+        yield cur, conn
+        conn.commit()
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Транзакция отменена: %s", exc)
+        raise
+    finally:
+        cur.close()
+        conn.close()
 
 # ---------- вспомогательная функция ----------
 def fetch_for_table(tbl: str):
