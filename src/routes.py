@@ -8,7 +8,7 @@ import mysql.connector
 import json
 from decimal import Decimal
 from fastapi.responses import JSONResponse
-from src.dbase import fetch_for_table
+from src.dbase import fetch_for_table, get_services
 import httpx
 import asyncio
 
@@ -254,6 +254,7 @@ async def stats():
 
 @router.get("/pub_dash")
 async def pub_dash():
+    print(get_services(), 'get services test')
     now = datetime.utcnow()
     services = {tbl: fetch_for_table(tbl) for tbl in TABLES}
     logger.info(f"Wishes unique_ips_24h: {services['wishes']['unique_ips_24h']}")    # Глобальный подсчет уникальных IP

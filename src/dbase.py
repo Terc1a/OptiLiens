@@ -41,6 +41,14 @@ def get_cursor():
         cur.close()
         conn.close()
 
+def get_services():
+    conn = mysql.connector.connect(**DB_CFG)
+    cur = conn.cursor(dictionary=True)
+    def q(sql, params=()):
+        cur.execute(sql, params)
+        return cur.fetchall()
+    services = q("SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'analytics' AND table_name NOT IN ('users', 'services')")  
+    return services
 
 @contextmanager
 def transaction():
