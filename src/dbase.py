@@ -48,7 +48,7 @@ def get_services():
         cur.execute(sql, params)
         return cur.fetchall()
     services = q("SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'analytics' AND table_name NOT IN ('users', 'services')")  
-    return services
+    return [row['TABLE_NAME'] for row in services]
 
 @contextmanager
 def transaction():

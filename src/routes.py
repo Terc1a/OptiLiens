@@ -254,9 +254,8 @@ async def stats():
 
 @router.get("/pub_dash")
 async def pub_dash():
-    print(get_services(), 'get services test')
     now = datetime.utcnow()
-    services = {tbl: fetch_for_table(tbl) for tbl in TABLES}
+    services = {tbl: fetch_for_table(tbl) for tbl in get_services()}
     logger.info(f"Wishes unique_ips_24h: {services['wishes']['unique_ips_24h']}")    # Глобальный подсчет уникальных IP
     conn = mysql.connector.connect(**DB_CFG)
     cur = conn.cursor()
