@@ -25,7 +25,6 @@ DB_CFG = {
     "database": conf['database'],
     "charset":  "utf8mb4"
 }
-TABLES = ['blog', 'hikariplus', 'manage', 'todo', 'wishes']
 
 # ---------- универсальный сериализатор ----------
 def json_serial(obj):
@@ -262,11 +261,11 @@ async def pub_dash():
 
     # Подсчет уникальных IP за 24 часа для всех сервисов
     unions = " UNION ALL ".join(
-        f"SELECT addr FROM `{t}` WHERE timed >= %s and addr !='85.192.130.91'" for t in TABLES
+        f"SELECT addr FROM `{t}` WHERE timed >= %s and addr !='85.192.130.91'" for t in get_services()
     )
     cur.execute(
         f"SELECT COUNT(DISTINCT addr) FROM ({unions}) AS u where addr !='85.192.130.91'",
-        [now - timedelta(hours=24)] * len(TABLES)
+        [now - timedelta(hours=24)] * len(get_services())
     )
     global_unique = int(cur.fetchone()[0])
     cur.close()
