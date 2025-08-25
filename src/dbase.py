@@ -4,7 +4,7 @@ import yaml
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from src.logger import logger
-
+import asyncio
 # Читаем конфигурацию один раз
 with open("config.yaml", "r") as f:
     conf = yaml.safe_load(f)
@@ -41,7 +41,7 @@ def get_cursor():
         cur.close()
         conn.close()
 
-def get_services():
+async def get_services_d():
     conn = mysql.connector.connect(**DB_CFG)
     cur = conn.cursor(dictionary=True)
     def q(sql, params=()):

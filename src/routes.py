@@ -8,7 +8,7 @@ import mysql.connector
 import json
 from decimal import Decimal
 from fastapi.responses import JSONResponse
-from src.dbase import fetch_for_table, get_services
+from src.dbase import fetch_for_table, get_services_d
 import httpx
 import asyncio
 
@@ -254,18 +254,19 @@ async def stats():
 @router.get("/pub_dash")
 async def pub_dash():
     now = datetime.utcnow()
-    services = {tbl: fetch_for_table(tbl) for tbl in get_services()}
-    logger.info(f"Wishes unique_ips_24h: {services['wishes']['unique_ips_24h']}")    # Глобальный подсчет уникальных IP
+    tables = await get_services_d()
+    logger.info(tables, type(tables), 'tables2')
+    services = {tbl: fetch_for_table(tbl) for tbl in tables}
     conn = mysql.connector.connect(**DB_CFG)
     cur = conn.cursor()
 
     # Подсчет уникальных IP за 24 часа для всех сервисов
     unions = " UNION ALL ".join(
-        f"SELECT addr FROM `{t}` WHERE timed >= %s and addr !='85.192.130.91'" for t in get_services()
+        f"SELECT addr FROM `{t}` WHERE timed >= %s and addr !='85.192.130.91'" for t in tables
     )
     cur.execute(
         f"SELECT COUNT(DISTINCT addr) FROM ({unions}) AS u where addr !='85.192.130.91'",
-        [now - timedelta(hours=24)] * len(get_services())
+        [now - timedelta(hours=24)] * len(tables)
     )
     global_unique = int(cur.fetchone()[0])
     cur.close()
