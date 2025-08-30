@@ -1,6 +1,6 @@
-host_db: 192.168.0.100
-user: analytics
-password: Zksj-dhfsee87
-database: analytics
+host_db: *
+user: *
+password: *
+database: *
 charset: utf8mb4
-SECRET_KEY: D49H384ew4u3w98457ft
+SECRET_KEY: *
